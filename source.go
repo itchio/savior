@@ -35,25 +35,3 @@ func DiscardByRead(source Source, delta int64) error {
 	}
 	return nil
 }
-
-type NopSeeker struct {
-	Offset int64
-	Source Source
-
-	io.ReadSeeker
-	io.ByteReader
-}
-
-var _ io.ReadSeeker = (*NopSeeker)(nil)
-
-func (ns *NopSeeker) Seek(offset int64, whence int) (int64, error) {
-	return ns.Offset, nil
-}
-
-func (ns *NopSeeker) Read(buf []byte) (int, error) {
-	return ns.Source.Read(buf)
-}
-
-func (ns *NopSeeker) ReadByte() (byte, error) {
-	return ns.Source.ReadByte()
-}

@@ -62,13 +62,7 @@ func (fs *flateSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, error
 
 			fc := ourCheckpoint.FlateCheckpoint
 			if sourceOffset == fc.Roffset {
-				// cool, we can use our flate checkpoint
-				ns := &savior.NopSeeker{
-					Offset: sourceOffset,
-					Source: fs.source,
-				}
-
-				fs.sr, err = fc.Resume(ns)
+				fs.sr, err = fc.Resume(fs.source)
 				if err != nil {
 					savior.Debugf(`flatesource: could not use flate checkpoint at R=%d / W=%d`, fc.Roffset, fc.Woffset)
 					// well, let's start over
