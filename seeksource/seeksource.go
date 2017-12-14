@@ -29,13 +29,15 @@ func (ss *seekSource) Save() (*savior.SourceCheckpoint, error) {
 }
 
 func (ss *seekSource) Resume(c *savior.SourceCheckpoint) (int64, error) {
-	if c != nil {
-		_, err := ss.rs.Seek(c.Offset, io.SeekStart)
-		if err != nil {
-			return ss.offset, errors.Wrap(err, 0)
-		}
-
+	if c == nil {
+		ss.offset = 0
+	} else {
 		ss.offset = c.Offset
+	}
+
+	newOffset, err := ss.rs.Seek(ss.offset, io.SeekStart)
+	if err != nil {
+		return newOffset, errors.Wrap(err, 0)
 	}
 
 	return ss.offset, nil
@@ -45,4 +47,10 @@ func (ss *seekSource) Read(buf []byte) (int, error) {
 	n, err := ss.rs.Read(buf)
 	ss.offset += int64(n)
 	return n, err
+}
+
+func (ss *seekSource) ReadByte() (byte, error) {
+	buf := make([]byte, 1)
+	_, err := ss.Read(buf)
+	return buf[0], err
 }

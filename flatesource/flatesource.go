@@ -50,6 +50,9 @@ func (fs *flateSource) Save() (*savior.SourceCheckpoint, error) {
 }
 
 func (fs *flateSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, error) {
+	fs.counter = 0
+	fs.checkpoint = nil
+
 	if checkpoint != nil {
 		if ourCheckpoint, ok := checkpoint.Data.(*FlateSourceCheckpoint); ok {
 			sourceOffset, err := fs.source.Resume(ourCheckpoint.SourceCheckpoint)
@@ -62,7 +65,7 @@ func (fs *flateSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, error
 				// cool, we can use our flate checkpoint
 				ns := &savior.NopSeeker{
 					Offset: sourceOffset,
-					Reader: fs.source,
+					Source: fs.source,
 				}
 
 				fs.sr, err = fc.Resume(ns)
@@ -120,12 +123,23 @@ func (fs *flateSource) Read(buf []byte) (int, error) {
 				return n, sourceErr
 			}
 
+			savior.Debugf("flatesource: saving, flate rOffset = %d, sourceCheckpoint.Offset = %d", flateCheckpoint.Roffset, sourceCheckpoint.Offset)
+
 			fs.checkpoint = &FlateSourceCheckpoint{
 				FlateCheckpoint:  deepcopy.Copy(flateCheckpoint).(*flate.Checkpoint),
 				SourceCheckpoint: sourceCheckpoint,
 			}
+
+			savior.Debugf("flatesource: saved checkpoint at byte %d", fs.offset)
+			err = nil
 		}
 	}
 
 	return n, err
+}
+
+func (fs *flateSource) ReadByte() (byte, error) {
+	buf := make([]byte, 1)
+	_, err := fs.Read(buf)
+	return buf[0], err
 }

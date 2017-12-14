@@ -16,6 +16,7 @@ type Source interface {
 	Resume(checkpoint *SourceCheckpoint) (int64, error)
 
 	io.Reader
+	io.ByteReader
 }
 
 func DiscardByRead(source Source, delta int64) error {
@@ -37,7 +38,10 @@ func DiscardByRead(source Source, delta int64) error {
 
 type NopSeeker struct {
 	Offset int64
-	Reader io.Reader
+	Source Source
+
+	io.ReadSeeker
+	io.ByteReader
 }
 
 var _ io.ReadSeeker = (*NopSeeker)(nil)
@@ -47,5 +51,9 @@ func (ns *NopSeeker) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (ns *NopSeeker) Read(buf []byte) (int, error) {
-	return ns.Reader.Read(buf)
+	return ns.Source.Read(buf)
+}
+
+func (ns *NopSeeker) ReadByte() (byte, error) {
+	return ns.Source.ReadByte()
 }
