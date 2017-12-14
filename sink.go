@@ -105,7 +105,7 @@ func (s *Sink) GetWriter(entry *Entry) (io.WriteCloser, error) {
 		return nil, errors.Wrap(err, 0)
 	}
 
-	if stats != nil {
+	if stats != nil && !onWindows {
 		// if file already existed, chmod it, just in case
 		err = f.Chmod(entry.Mode | ModeMask)
 		if err != nil {
