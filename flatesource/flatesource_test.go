@@ -8,18 +8,15 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/kompress/flate"
+	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/flatesource"
 	"github.com/itchio/savior/seeksource"
+	"github.com/itchio/savior/semirandom"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFlateSource(t *testing.T) {
-	inputString := "That is a nice fox"
-	var inputData = []byte(inputString)
-	const maxSize = 12 * 1024 * 1024
-	for len(inputData) < maxSize {
-		inputData = append(inputData, inputData...)
-	}
+	inputData := semirandom.Generate(4 * 1024 * 1024 /* 4 MiB */)
 
 	compressedBuf := new(bytes.Buffer)
 	w, err := flate.NewWriter(compressedBuf, 9)
@@ -36,19 +33,19 @@ func TestFlateSource(t *testing.T) {
 
 	compressedData := compressedBuf.Bytes()
 	source := seeksource.New(bytes.NewReader(compressedData))
-	fs := flatesource.New(source, 1*1024*1024 /* 1 MiB */)
+	fs := flatesource.New(source, 256*1024 /* 256 KiB */)
 
 	_, err = fs.Resume(nil)
 	assert.NoError(t, err)
 
-	decompressedBuf := new(bytes.Buffer)
+	output := checker.New(inputData)
+	totalCheckpoints := 0
 
-	buf := make([]byte, maxSize/30)
-	i := 0
+	buf := make([]byte, 32*1024)
 	for {
 		n, readErr := fs.Read(buf)
 
-		_, err := decompressedBuf.Write(buf[:n])
+		_, err := output.Write(buf[:n])
 		assert.NoError(t, err)
 		if err != nil {
 			t.FailNow()
@@ -63,29 +60,31 @@ func TestFlateSource(t *testing.T) {
 			t.FailNow()
 		}
 
-		i++
-		if i%20 == 0 {
-			c, err := fs.Save()
+		c, err := fs.Save()
+		assert.NoError(t, err)
+		if err != nil {
+			t.FailNow()
+		}
+
+		if c != nil {
+			totalCheckpoints++
+			log.Printf("%s ↓ made checkpoint", humanize.IBytes(uint64(c.Offset)))
+
+			newOffset, err := fs.Resume(c)
 			assert.NoError(t, err)
 			if err != nil {
 				t.FailNow()
 			}
 
-			if c != nil {
-				log.Printf("got checkpoint at %s", humanize.IBytes(uint64(c.Offset)))
-
-				newOffset, err := fs.Resume(c)
+			log.Printf("%s ↻ resumed", humanize.IBytes(uint64(newOffset)))
+			_, err = output.Seek(newOffset, io.SeekStart)
+			if err != nil {
 				assert.NoError(t, err)
-				if err != nil {
-					t.FailNow()
-				}
-
-				log.Printf("resumed at %d", newOffset)
-				decompressedBuf.Truncate(int(newOffset))
+				t.FailNow()
 			}
 		}
 	}
 
-	assert.EqualValues(t, len(inputData), decompressedBuf.Len())
-	assert.EqualValues(t, inputData, decompressedBuf.Bytes())
+	log.Printf("→ %d checkpoints total", totalCheckpoints)
+	assert.True(t, totalCheckpoints > 0, "had at least one checkpoint")
 }

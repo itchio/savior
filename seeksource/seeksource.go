@@ -50,7 +50,7 @@ func (ss *seekSource) Read(buf []byte) (int, error) {
 }
 
 func (ss *seekSource) ReadByte() (byte, error) {
-	buf := make([]byte, 1)
+	buf := []byte{0}
 	_, err := ss.Read(buf)
 	return buf[0], err
 }

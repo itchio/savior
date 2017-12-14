@@ -139,7 +139,7 @@ func (fs *flateSource) Read(buf []byte) (int, error) {
 }
 
 func (fs *flateSource) ReadByte() (byte, error) {
-	buf := make([]byte, 1)
+	buf := []byte{0}
 	_, err := fs.Read(buf)
 	return buf[0], err
 }

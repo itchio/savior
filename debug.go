@@ -8,5 +8,7 @@ import (
 var outputDebug = os.Getenv("SAVIOR_DEBUG") == "1"
 
 func Debugf(format string, args ...interface{}) {
-	log.Printf(format, args...)
+	if outputDebug {
+		log.Printf(format, args...)
+	}
 }
