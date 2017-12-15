@@ -1,6 +1,7 @@
 package bzip2source
 
 import (
+	"encoding/gob"
 	"fmt"
 
 	"github.com/go-errors/errors"
@@ -21,13 +22,13 @@ type bzip2Source struct {
 	offset  int64
 	counter int64
 
-	checkpoint *bzip2sourceCheckpoint
+	checkpoint *Bzip2SourceCheckpoint
 }
 
-type bzip2sourceCheckpoint struct {
-	Offset            int64
-	SourceCheckpoint  *savior.SourceCheckpoint
-	Bzip2Checkpoint   *bzip2.Checkpoint
+type Bzip2SourceCheckpoint struct {
+	Offset           int64
+	SourceCheckpoint *savior.SourceCheckpoint
+	Bzip2Checkpoint  *bzip2.Checkpoint
 }
 
 var _ savior.Source = (*bzip2Source)(nil)
@@ -55,7 +56,7 @@ func (bs *bzip2Source) Resume(checkpoint *savior.SourceCheckpoint) (int64, error
 	bs.checkpoint = nil
 
 	if checkpoint != nil {
-		if ourCheckpoint, ok := checkpoint.Data.(*bzip2sourceCheckpoint); ok {
+		if ourCheckpoint, ok := checkpoint.Data.(*Bzip2SourceCheckpoint); ok {
 			sourceOffset, err := bs.source.Resume(ourCheckpoint.SourceCheckpoint)
 			if err != nil {
 				return 0, errors.Wrap(err, 0)
@@ -121,10 +122,10 @@ func (bs *bzip2Source) Read(buf []byte) (int, error) {
 
 			savior.Debugf("bzip2source: saving, bzip2 rOffset = %d, sourceCheckpoint.Offset = %d", bzip2Checkpoint.Roffset, sourceCheckpoint.Offset)
 
-			bs.checkpoint = &bzip2sourceCheckpoint{
-				Offset:            bs.offset,
-				Bzip2Checkpoint:   deepcopy.Copy(bzip2Checkpoint).(*bzip2.Checkpoint),
-				SourceCheckpoint:  sourceCheckpoint,
+			bs.checkpoint = &Bzip2SourceCheckpoint{
+				Offset:           bs.offset,
+				Bzip2Checkpoint:  deepcopy.Copy(bzip2Checkpoint).(*bzip2.Checkpoint),
+				SourceCheckpoint: sourceCheckpoint,
 			}
 
 			savior.Debugf("bzip2source: saved checkpoint at byte %d", bs.offset)
@@ -139,4 +140,8 @@ func (bs *bzip2Source) ReadByte() (byte, error) {
 	buf := []byte{0}
 	_, err := bs.Read(buf)
 	return buf[0], err
+}
+
+func init() {
+	gob.Register(&Bzip2SourceCheckpoint{})
 }

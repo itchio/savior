@@ -1,6 +1,7 @@
 package flatesource
 
 import (
+	"encoding/gob"
 	"fmt"
 
 	"github.com/go-errors/errors"
@@ -52,6 +53,8 @@ func (fs *flateSource) Save() (*savior.SourceCheckpoint, error) {
 func (fs *flateSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, error) {
 	fs.counter = 0
 	fs.checkpoint = nil
+
+	savior.Debugf(`flate: asked to resume`)
 
 	if checkpoint != nil {
 		if ourCheckpoint, ok := checkpoint.Data.(*FlateSourceCheckpoint); ok {
@@ -136,4 +139,8 @@ func (fs *flateSource) ReadByte() (byte, error) {
 	buf := []byte{0}
 	_, err := fs.Read(buf)
 	return buf[0], err
+}
+
+func init() {
+	gob.Register(&FlateSourceCheckpoint{})
 }

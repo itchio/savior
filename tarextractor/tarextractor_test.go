@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/itchio/savior/semirandom"
+
 	"github.com/itchio/arkive/tar"
 	"github.com/itchio/savior"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +24,11 @@ func must(t *testing.T, err error) {
 func TestTar(t *testing.T) {
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
-	helloData := []byte("Hello, it's me!")
+	helloData := semirandom.Generate(8 * 1024 * 1024)
 
 	err := tw.WriteHeader(&tar.Header{
 		Typeflag: tar.TypeReg,
-		Name:     "hello.txt",
+		Name:     "hello.bin",
 		Mode:     0644,
 		Size:     int64(len(helloData)),
 	})

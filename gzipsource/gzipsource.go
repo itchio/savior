@@ -1,6 +1,7 @@
 package gzipsource
 
 import (
+	"encoding/gob"
 	"fmt"
 
 	"github.com/go-errors/errors"
@@ -143,4 +144,8 @@ func (gs *gzipSource) ReadByte() (byte, error) {
 	buf := []byte{0}
 	_, err := gs.Read(buf)
 	return buf[0], err
+}
+
+func init() {
+	gob.Register(&GzipSourceCheckpoint{})
 }

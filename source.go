@@ -1,6 +1,7 @@
 package savior
 
 import (
+	"encoding/gob"
 	"io"
 
 	"github.com/go-errors/errors"
@@ -34,4 +35,8 @@ func DiscardByRead(source Source, delta int64) error {
 		delta -= int64(n)
 	}
 	return nil
+}
+
+func init() {
+	gob.Register(&SourceCheckpoint{})
 }

@@ -1,5 +1,7 @@
 package savior
 
+import "encoding/gob"
+
 type ExtractorCheckpoint struct {
 	SourceCheckpoint *SourceCheckpoint
 	EntryIndex       int64
@@ -22,4 +24,8 @@ type ExtractorParams struct {
 type Extractor interface {
 	Configure(params *ExtractorParams) error
 	Work() error
+}
+
+func init() {
+	gob.Register(&ExtractorCheckpoint{})
 }
