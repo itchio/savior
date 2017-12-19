@@ -70,7 +70,7 @@ func roundtripThroughGob(t *testing.T, c *savior.SourceCheckpoint) (*savior.Sour
 
 	buflen := saveBuf.Len()
 
-	c2 := &SourceCheckpoint{}
+	c2 := &savior.SourceCheckpoint{}
 	err = gob.NewDecoder(saveBuf).Decode(c2)
 	must(t, err)
 
