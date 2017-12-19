@@ -22,8 +22,18 @@ func must(t *testing.T, err error) {
 func RunSourceTest(t *testing.T, source savior.Source, reference []byte) {
 	_, err := source.Resume(nil)
 	assert.NoError(t, err)
-
 	output := NewWriter(reference)
+
+	// first try just copying
+	_, err = io.Copy(output, source)
+	assert.NoError(t, err)
+
+	// now reset
+	_, err = source.Resume(nil)
+	assert.NoError(t, err)
+	_, err = output.Seek(0, io.SeekStart)
+	assert.NoError(t, err)
+
 	totalCheckpoints := 0
 
 	buf := make([]byte, 16*1024)

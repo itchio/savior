@@ -20,7 +20,14 @@ func New() savior.Extractor {
 }
 
 func (te *tarExtractor) Configure(params *savior.ExtractorParams) error {
-	te.source = params.Source
+	source := params.Source
+
+	_, err := source.Resume(nil)
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	te.source = source
 	te.sink = params.Sink
 	return nil
 }

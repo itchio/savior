@@ -3,10 +3,14 @@ package tarextractor_test
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
 
+	humanize "github.com/dustin/go-humanize"
+	"github.com/itchio/savior/bzip2source"
 	"github.com/itchio/savior/checker"
+	"github.com/itchio/savior/gzipsource"
 	"github.com/itchio/savior/semirandom"
 
 	"github.com/itchio/arkive/tar"
@@ -27,8 +31,8 @@ func must(t *testing.T, err error) {
 func TestTar(t *testing.T) {
 	sink := checker.NewSink()
 	rng := rand.New(rand.NewSource(0xf617a899))
-	for i := 0; i < 100; i++ {
-		if rng.Intn(100) < 10 {
+	for i := 0; i < 20; i++ {
+		if rng.Intn(100) < 20 {
 			// ok, make a symlink
 			name := fmt.Sprintf("symlink-%d", i)
 			sink.Items[name] = &checker.Item{
@@ -38,7 +42,7 @@ func TestTar(t *testing.T) {
 				},
 				Linkname: fmt.Sprintf("target-%d", i*2),
 			}
-		} else if rng.Intn(100) < 20 {
+		} else if rng.Intn(100) < 40 {
 			// ok, make a dir
 			name := fmt.Sprintf("dir-%d", i)
 			sink.Items[name] = &checker.Item{
@@ -49,7 +53,7 @@ func TestTar(t *testing.T) {
 			}
 		} else {
 			// ok, make a file
-			size := rng.Int63n(512 * 1024)
+			size := rng.Int63n(4 * 1024 * 1024)
 			name := fmt.Sprintf("file-%d", i)
 			sink.Items[name] = &checker.Item{
 				Entry: &savior.Entry{
@@ -62,9 +66,28 @@ func TestTar(t *testing.T) {
 		}
 	}
 
+	log.Printf("Making tar from checker.Sink...")
 	tarBytes := makeTar(t, sink)
 	source := seeksource.FromBytes(tarBytes)
+	log.Printf("Testing .tar (%s)", humanize.IBytes(uint64(len(tarBytes))))
+	testTarExtractor(t, source, sink)
 
+	log.Printf("Compressing with gzip...")
+	gzipBytes, err := checker.GzipCompress(tarBytes)
+	must(t, err)
+	gzipSource := gzipsource.New(seeksource.FromBytes(gzipBytes), 1*1024*1024)
+	log.Printf("Testing .tar.gz (%s)", humanize.IBytes(uint64(len(gzipBytes))))
+	testTarExtractor(t, gzipSource, sink)
+
+	log.Printf("Compressing with bzip2...")
+	bzip2Bytes, err := checker.Bzip2Compress(tarBytes)
+	must(t, err)
+	bzip2Source := bzip2source.New(seeksource.FromBytes(bzip2Bytes), 1*1024*1024)
+	log.Printf("Testing .tar.bz2 (%s)", humanize.IBytes(uint64(len(bzip2Bytes))))
+	testTarExtractor(t, bzip2Source, sink)
+}
+
+func testTarExtractor(t *testing.T, source savior.Source, sink savior.Sink) {
 	ex := tarextractor.New()
 	err := ex.Configure(&savior.ExtractorParams{
 		LastCheckpoint: nil,
