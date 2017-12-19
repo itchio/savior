@@ -1,23 +1,46 @@
 package seeksource
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/go-errors/errors"
 	"github.com/itchio/savior"
+	"github.com/itchio/wharf/eos"
 )
 
 type seekSource struct {
 	rs io.ReadSeeker
 
-	offset int64
+	offset     int64
+	totalBytes int64
 }
 
 var _ savior.Source = (*seekSource)(nil)
 
-func New(rs io.ReadSeeker) *seekSource {
+func FromFile(file eos.File) savior.Source {
+	res := &seekSource{
+		rs: file,
+	}
+
+	stats, err := file.Stat()
+	if err == nil {
+		res.totalBytes = stats.Size()
+	}
+
+	return res
+}
+
+func FromBytes(buf []byte) savior.Source {
+	return NewWithSize(bytes.NewReader(buf), int64(len(buf)))
+}
+
+// NewWithSize returns a new source that reads from an io.ReadSeeker.
+// Progress() will return meaningful values if totalBytes is non-zero
+func NewWithSize(rs io.ReadSeeker, totalBytes int64) savior.Source {
 	return &seekSource{
-		rs: rs,
+		rs:         rs,
+		totalBytes: totalBytes,
 	}
 }
 
@@ -53,4 +76,12 @@ func (ss *seekSource) ReadByte() (byte, error) {
 	buf := []byte{0}
 	_, err := ss.Read(buf)
 	return buf[0], err
+}
+
+func (ss *seekSource) Progress() float64 {
+	if ss.totalBytes > 0 {
+		return float64(ss.offset) / float64(ss.totalBytes)
+	}
+
+	return 0
 }

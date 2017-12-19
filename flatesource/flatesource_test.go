@@ -24,7 +24,7 @@ func TestFlateSource(t *testing.T) {
 	log.Printf("uncompressed size: %s", humanize.IBytes(uint64(len(reference))))
 	log.Printf("  compressed size: %s", humanize.IBytes(uint64(len(compressed))))
 
-	source := seeksource.New(bytes.NewReader(compressed))
+	source := seeksource.FromBytes(compressed)
 	fs := flatesource.New(source, 256*1024 /* 256 KiB threshold */)
 
 	savior.RunSourceTest(t, fs, reference)

@@ -141,6 +141,13 @@ func (fs *flateSource) ReadByte() (byte, error) {
 	return buf[0], err
 }
 
+func (fs *flateSource) Progress() float64 {
+	// We can't tell how large the uncompressed stream is until we finish
+	// decompressing it. The underlying's source progress is a good enough
+	// approximation.
+	return fs.source.Progress()
+}
+
 func init() {
 	gob.Register(&FlateSourceCheckpoint{})
 }

@@ -10,7 +10,7 @@ import (
 
 type tarExtractor struct {
 	source savior.Source
-	sink   *savior.Sink
+	sink   savior.Sink
 }
 
 var _ savior.Extractor = (*tarExtractor)(nil)

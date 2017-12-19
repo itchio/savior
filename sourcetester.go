@@ -47,7 +47,7 @@ func RunSourceTest(t *testing.T, source Source, reference []byte) {
 			c2, checkpointSize := roundtripThroughGob(t, c)
 
 			totalCheckpoints++
-			log.Printf("%s ↓ made %s checkpoint", humanize.IBytes(uint64(c2.Offset)), humanize.IBytes(uint64(checkpointSize)))
+			log.Printf("%s ↓ made %s checkpoint @ %.2f%%", humanize.IBytes(uint64(c2.Offset)), humanize.IBytes(uint64(checkpointSize)), source.Progress()*100)
 
 			newOffset, err := source.Resume(c2)
 			must(t, err)

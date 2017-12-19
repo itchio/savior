@@ -18,7 +18,7 @@ type ExtractorParams struct {
 	Source         Source
 	LastCheckpoint *ExtractorCheckpoint
 	OnProgress     ProgressFunc
-	Sink           *Sink
+	Sink           Sink
 }
 
 type Extractor interface {

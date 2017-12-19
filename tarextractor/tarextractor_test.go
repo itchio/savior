@@ -40,7 +40,7 @@ func TestTar(t *testing.T) {
 	err = tw.Close()
 	must(t, err)
 
-	source := seeksource.New(bytes.NewReader(buf.Bytes()))
+	source := seeksource.FromBytes(buf.Bytes())
 
 	ex := tarextractor.New()
 
@@ -48,7 +48,7 @@ func TestTar(t *testing.T) {
 		LastCheckpoint: nil,
 		OnProgress:     nil,
 		Source:         source,
-		Sink: &savior.Sink{
+		Sink: &savior.FolderSink{
 			Directory: "./ignored",
 		},
 	})
