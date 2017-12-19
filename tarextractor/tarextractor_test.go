@@ -2,6 +2,8 @@ package tarextractor_test
 
 import (
 	"bytes"
+	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/itchio/savior/semirandom"
@@ -24,20 +26,26 @@ func must(t *testing.T, err error) {
 func TestTar(t *testing.T) {
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
-	helloData := semirandom.Generate(8 * 1024 * 1024)
 
-	err := tw.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeReg,
-		Name:     "hello.bin",
-		Mode:     0644,
-		Size:     int64(len(helloData)),
-	})
-	must(t, err)
+	rng := rand.New(rand.NewSource(0xf617a899))
+	for i := 0; i < 12; i++ {
+		dataLen := rng.Int63n(512 * 1024)
 
-	_, err = tw.Write(helloData)
-	must(t, err)
+		name := fmt.Sprintf("hello%d.bin", i)
 
-	err = tw.Close()
+		err := tw.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     name,
+			Mode:     0644,
+			Size:     int64(dataLen),
+		})
+		must(t, err)
+
+		err = semirandom.Write(tw, dataLen, rng.Int63())
+		must(t, err)
+	}
+
+	err := tw.Close()
 	must(t, err)
 
 	source := seeksource.FromBytes(buf.Bytes())

@@ -17,7 +17,7 @@ import (
 )
 
 func TestGzipSource(t *testing.T) {
-	reference := semirandom.Generate(4 * 1024 * 1024 /* 4 MiB of random data */)
+	reference := semirandom.Bytes(4 * 1024 * 1024 /* 4 MiB of random data */)
 	compressed, err := gzipCompress(reference)
 	assert.NoError(t, err)
 

@@ -2,35 +2,80 @@ package semirandom
 
 import (
 	"bytes"
+	"io"
 	"math/rand"
 )
 
-func Generate(length int) []byte {
-	gen := rand.New(rand.NewSource(0xfaadbeef))
-	inputBuf := new(bytes.Buffer)
+const DefaultSeed = 0xfaadbeef
+
+func Write(output io.Writer, length int64, seed int64) error {
+	lw := &limitedWriter{
+		w:   output,
+		max: length,
+	}
+	rng := rand.New(rand.NewSource(seed))
 
 	var oldSeqs [][]byte
 
-	for inputBuf.Len() < length {
+	for lw.NeedsMore() {
 		var seq []byte
 
-		if gen.Intn(100) >= 80 {
+		if rng.Intn(100) >= 80 && len(oldSeqs) > 0 {
 			// re-use old seq
-			seq = oldSeqs[gen.Intn(len(oldSeqs))]
+			seq = oldSeqs[rng.Intn(len(oldSeqs))]
 		} else {
-			seqLength := gen.Intn(48 * 1024)
+			seqLength := rng.Intn(48 * 1024)
 			seq := make([]byte, seqLength)
 			for j := 0; j < seqLength; j++ {
-				seq[j] = byte(gen.Intn(255))
+				seq[j] = byte(rng.Intn(255))
 			}
 			oldSeqs = append(oldSeqs, seq)
 		}
 
-		numRepetitions := gen.Intn(24)
+		numRepetitions := rng.Intn(24)
 		for j := 0; j < numRepetitions; j++ {
-			inputBuf.Write(seq)
+			_, err := lw.Write(seq)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	return inputBuf.Bytes()[:length]
+	return nil
+}
+
+func Bytes(length int64) []byte {
+	buf := new(bytes.Buffer)
+	Write(buf, length, DefaultSeed)
+	return buf.Bytes()
+}
+
+type limitedWriter struct {
+	w io.Writer
+
+	c   int64
+	max int64
+}
+
+var _ io.Writer = (*limitedWriter)(nil)
+
+func (lw *limitedWriter) Write(buf []byte) (int, error) {
+	if lw.c >= lw.max {
+		// just drop it!
+		return len(buf), nil
+	}
+
+	toWrite := len(buf)
+	nextEnd := lw.c + int64(toWrite)
+	if nextEnd > lw.max {
+		toWrite = int(lw.max - lw.c)
+	}
+
+	n, err := lw.w.Write(buf[:toWrite])
+	lw.c += int64(n)
+	return n, err
+}
+
+func (lw *limitedWriter) NeedsMore() bool {
+	return lw.c < lw.max
 }
