@@ -1,4 +1,4 @@
-package savior
+package checker
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/itchio/savior/checker"
+	"github.com/itchio/savior"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,11 +19,11 @@ func must(t *testing.T, err error) {
 	}
 }
 
-func RunSourceTest(t *testing.T, source Source, reference []byte) {
+func RunSourceTest(t *testing.T, source savior.Source, reference []byte) {
 	_, err := source.Resume(nil)
 	assert.NoError(t, err)
 
-	output := checker.New(reference)
+	output := NewWriter(reference)
 	totalCheckpoints := 0
 
 	buf := make([]byte, 16*1024)
@@ -62,7 +62,7 @@ func RunSourceTest(t *testing.T, source Source, reference []byte) {
 	assert.True(t, totalCheckpoints > 0, "had at least one checkpoint")
 }
 
-func roundtripThroughGob(t *testing.T, c *SourceCheckpoint) (*SourceCheckpoint, int) {
+func roundtripThroughGob(t *testing.T, c *savior.SourceCheckpoint) (*savior.SourceCheckpoint, int) {
 	saveBuf := new(bytes.Buffer)
 	enc := gob.NewEncoder(saveBuf)
 	err := enc.Encode(c)

@@ -62,16 +62,19 @@ func (te *tarExtractor) Work() error {
 
 		switch entry.Kind {
 		case savior.EntryKindDir:
+			savior.Debugf(`tar: extracting dir %s`, entry.CanonicalPath)
 			err := te.sink.Mkdir(entry)
 			if err != nil {
 				return errors.Wrap(err, 0)
 			}
 		case savior.EntryKindSymlink:
+			savior.Debugf(`tar: extracting symlink %s`, entry.CanonicalPath)
 			err := te.sink.Symlink(entry, hdr.Linkname)
 			if err != nil {
 				return errors.Wrap(err, 0)
 			}
 		case savior.EntryKindFile:
+			savior.Debugf(`tar: extracting file %s`, entry.CanonicalPath)
 			err := (func() error {
 				w, err := te.sink.GetWriter(entry)
 				if err != nil {

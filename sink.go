@@ -70,3 +70,30 @@ type Sink interface {
 	// GetWriter returns a writer at entry.WriteOffset
 	GetWriter(entry *Entry) (EntryWriter, error)
 }
+
+// ===============================
+
+func NopSync(w io.Writer) EntryWriter {
+	return &nopSync{w: w}
+}
+
+type nopSync struct {
+	w io.Writer
+}
+
+var _ EntryWriter = (*nopSync)(nil)
+
+func (ns *nopSync) Write(buf []byte) (int, error) {
+	return ns.w.Write(buf)
+}
+
+func (ns *nopSync) Close() error {
+	if closer, ok := ns.w.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
+}
+
+func (ns *nopSync) Sync() error {
+	return nil
+}
