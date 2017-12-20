@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"log"
 	"os"
+	"reflect"
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
@@ -53,11 +54,11 @@ func testZipExtractor(t *testing.T, source []byte, sink savior.Sink, shouldSave 
 
 	sc := checker.NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
 		if shouldSave() {
-			log.Printf("↓ Saving at entry %d", checkpoint.EntryIndex)
+			log.Printf("↓ Saving at #%d", checkpoint.EntryIndex)
 			c = deepcopy.Copy(checkpoint).(*savior.ExtractorCheckpoint)
 			return savior.AfterSaveStop, nil
 		} else {
-			log.Printf("↷ Skipping over checkpoint at entry %d", checkpoint.EntryIndex)
+			log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
 			return savior.AfterSaveContinue, nil
 		}
 	})
@@ -77,9 +78,9 @@ func testZipExtractor(t *testing.T, source []byte, sink savior.Sink, shouldSave 
 			log.Printf("→ First resume")
 		} else {
 			if c.SourceCheckpoint == nil {
-				log.Printf("↻ Resuming from entry %d", c.EntryIndex)
+				log.Printf("↻ Resuming from #%d", c.EntryIndex)
 			} else {
-				log.Printf("↻ Resuming from entry %d, source is at %s", c.EntryIndex, humanize.IBytes(uint64(c.SourceCheckpoint.Offset)))
+				log.Printf("↻ Resuming from #%d, source is at %s :: %v", c.EntryIndex, humanize.IBytes(uint64(c.SourceCheckpoint.Offset)), reflect.TypeOf(c.SourceCheckpoint.Data))
 			}
 		}
 		err := ex.Resume(c)
@@ -102,6 +103,10 @@ func makeZip(t *testing.T, sink *checker.Sink) []byte {
 	buf := new(bytes.Buffer)
 	zw := zip.NewWriter(buf)
 
+	shouldCompress := true
+	numDeflate := 0
+	numStore := 0
+
 	for _, item := range sink.Items {
 		fh := &zip.FileHeader{
 			Name: item.Entry.CanonicalPath,
@@ -114,7 +119,14 @@ func makeZip(t *testing.T, sink *checker.Sink) []byte {
 			must(t, err)
 		case savior.EntryKindFile:
 			fh.SetMode(0644)
-			fh.Method = zip.Deflate
+			if shouldCompress {
+				fh.Method = zip.Deflate
+				numDeflate++
+			} else {
+				fh.Method = zip.Store
+				numStore++
+			}
+			shouldCompress = !shouldCompress
 			writer, err := zw.CreateHeader(fh)
 			must(t, err)
 
@@ -132,6 +144,8 @@ func makeZip(t *testing.T, sink *checker.Sink) []byte {
 
 	err := zw.Close()
 	must(t, err)
+
+	log.Printf("Made zip with %d deflate files, %d store files", numDeflate, numStore)
 
 	return buf.Bytes()
 }
