@@ -27,17 +27,39 @@ func TestZip(t *testing.T) {
 
 	log.Printf("Making zip from checker.Sink...")
 	zipBytes := makeZip(t, sink)
-	log.Printf("Testing .zip (%s)", humanize.IBytes(uint64(len(zipBytes))))
-	testZipExtractor(t, zipBytes, sink)
+
+	log.Printf("Testing .zip (%s), no resumes", humanize.IBytes(uint64(len(zipBytes))))
+	testZipExtractor(t, zipBytes, sink, func() bool {
+		return false
+	})
+
+	log.Printf("Testing .zip (%s), every resume", humanize.IBytes(uint64(len(zipBytes))))
+	testZipExtractor(t, zipBytes, sink, func() bool {
+		return true
+	})
+
+	log.Printf("Testing .zip (%s), every other resume", humanize.IBytes(uint64(len(zipBytes))))
+	i := 0
+	testZipExtractor(t, zipBytes, sink, func() bool {
+		i++
+		return i%2 == 0
+	})
 }
 
-func testZipExtractor(t *testing.T, source []byte, sink savior.Sink) {
+type shouldSaveFunc func() bool
+
+func testZipExtractor(t *testing.T, source []byte, sink savior.Sink, shouldSave shouldSaveFunc) {
 	var c *savior.ExtractorCheckpoint
 
 	sc := checker.NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
-		log.Printf("↓ Saving at entry %d", checkpoint.EntryIndex)
-		c = deepcopy.Copy(checkpoint).(*savior.ExtractorCheckpoint)
-		return savior.AfterSaveStop, nil
+		if shouldSave() {
+			log.Printf("↓ Saving at entry %d", checkpoint.EntryIndex)
+			c = deepcopy.Copy(checkpoint).(*savior.ExtractorCheckpoint)
+			return savior.AfterSaveStop, nil
+		} else {
+			log.Printf("↷ Skipping over checkpoint at entry %d", checkpoint.EntryIndex)
+			return savior.AfterSaveContinue, nil
+		}
 	})
 
 	maxResumes := 24
