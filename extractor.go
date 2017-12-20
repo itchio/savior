@@ -6,6 +6,7 @@ type ExtractorCheckpoint struct {
 	SourceCheckpoint *SourceCheckpoint
 	EntryIndex       int64
 	Entry            *Entry
+	Progress         float64
 	Data             interface{}
 }
 

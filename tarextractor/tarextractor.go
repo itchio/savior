@@ -170,6 +170,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 
 						checkpoint.SourceCheckpoint = sourceCheckpoint
 						checkpoint.Data = tarCheckpoint
+						checkpoint.Progress = te.source.Progress()
 						return checkpoint, nil
 					},
 				})

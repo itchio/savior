@@ -72,6 +72,16 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 	stop := false
 	numEntries := int64(len(ze.zr.File))
 
+	var doneBytes int64
+	var totalBytes int64
+	for i, zf := range ze.zr.File {
+		size := int64(zf.UncompressedSize64)
+		totalBytes += size
+		if int64(i) < checkpoint.EntryIndex {
+			doneBytes += size
+		}
+	}
+
 	for entryIndex := checkpoint.EntryIndex; entryIndex < numEntries; entryIndex++ {
 		if stop {
 			return savior.StopErr
@@ -219,6 +229,9 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 								return nil, errors.Wrap(err, 0)
 							}
 
+							actualDoneBytes := doneBytes + entry.WriteOffset
+							checkpoint.Progress = float64(actualDoneBytes) / float64(totalBytes)
+
 							return checkpoint, nil
 						},
 					})
@@ -232,6 +245,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 					}
 				}
 			}
+			doneBytes += int64(zf.UncompressedSize64)
 
 			return nil
 		}()

@@ -6,6 +6,7 @@ import (
 	"log"
 	"reflect"
 	"testing"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
@@ -20,14 +21,16 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 	sc := NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
 		if shouldSave() {
 			c2, checkpointSize := roundtripEThroughGob(t, checkpoint)
-			log.Printf("↓ Saved at #%d (%s checkpoint)", c2.EntryIndex, humanize.IBytes(uint64(checkpointSize)))
+			log.Printf("↓ #%d [%.2f%%] (%s checkpoint)", c2.EntryIndex, c2.Progress*100, humanize.IBytes(uint64(checkpointSize)))
 			c = c2
 			return savior.AfterSaveStop, nil
 		}
 
-		log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
+		// log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
 		return savior.AfterSaveContinue, nil
 	})
+
+	startTime := time.Now()
 
 	maxResumes := 24
 	numResumes := 0
@@ -44,9 +47,9 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 			log.Printf("→ First resume")
 		} else {
 			if c.SourceCheckpoint == nil {
-				log.Printf("↻ Resuming from #%d", c.EntryIndex)
+				log.Printf("↻ #%d [%.2f%%]", c.EntryIndex, c.Progress*100)
 			} else {
-				log.Printf("↻ Resuming from #%d, source is at %s :: %v", c.EntryIndex, humanize.IBytes(uint64(c.SourceCheckpoint.Offset)), reflect.TypeOf(c.SourceCheckpoint.Data))
+				log.Printf("↻ #%d [%.2f%%], %v @ %s", c.EntryIndex, c.Progress*100, reflect.TypeOf(c.SourceCheckpoint.Data), humanize.IBytes(uint64(c.SourceCheckpoint.Offset)))
 			}
 		}
 		err := ex.Resume(c)
@@ -62,7 +65,8 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 		break
 	}
 
-	log.Printf("Total resumes: %d", numResumes)
+	totalDuration := time.Since(startTime)
+	log.Printf("Done in %s, total resumes: %d", totalDuration, numResumes)
 }
 
 func roundtripEThroughGob(t *testing.T, c *savior.ExtractorCheckpoint) (*savior.ExtractorCheckpoint, int) {
