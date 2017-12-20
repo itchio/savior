@@ -12,7 +12,7 @@ func MakeTestSink() *Sink {
 	sink := NewSink()
 	rng := rand.New(rand.NewSource(0xf617a899))
 	for i := 0; i < 20; i++ {
-		if rng.Intn(100) < 20 {
+		if rng.Intn(100) < 10 {
 			// ok, make a symlink
 			name := fmt.Sprintf("symlink-%d", i)
 			sink.Items[name] = &Item{
@@ -22,7 +22,7 @@ func MakeTestSink() *Sink {
 				},
 				Linkname: fmt.Sprintf("target-%d", i*2),
 			}
-		} else if rng.Intn(100) < 40 {
+		} else if rng.Intn(100) < 20 {
 			// ok, make a dir
 			name := fmt.Sprintf("dir-%d", i)
 			sink.Items[name] = &Item{
@@ -33,7 +33,7 @@ func MakeTestSink() *Sink {
 			}
 		} else {
 			// ok, make a file
-			size := rng.Int63n(4 * 1024 * 1024)
+			size := rng.Int63n(6 * 1024 * 1024)
 			name := fmt.Sprintf("file-%d", i)
 			sink.Items[name] = &Item{
 				Entry: &savior.Entry{
