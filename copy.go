@@ -6,6 +6,8 @@ import (
 	"github.com/go-errors/errors"
 )
 
+var StopErr = errors.New("copy was stopped after save!")
+
 type MakeCheckpointFunc func() (*ExtractorCheckpoint, error)
 
 type CopyResult struct {
@@ -44,13 +46,16 @@ func CopyWithSaver(params *CopyParams) (*CopyResult, error) {
 			return nil, errors.Wrap(err, 0)
 		}
 
-		if params.SaveConsumer != nil && params.SaveConsumer.ShouldSave() {
+		if params.SaveConsumer != nil && params.SaveConsumer.ShouldSave(int64(n)) {
 			checkpoint, err := params.MakeCheckpoint()
 			if err != nil {
 				return nil, errors.Wrap(err, 0)
 			}
 
-			action := params.SaveConsumer.Save(checkpoint)
+			action, err := params.SaveConsumer.Save(checkpoint)
+			if err != nil {
+				return nil, errors.Wrap(err, 0)
+			}
 			if action != AfterSaveContinue {
 				return &CopyResult{
 					Action: AfterSaveStop,

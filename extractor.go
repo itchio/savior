@@ -17,8 +17,8 @@ const (
 )
 
 type SaveConsumer interface {
-	ShouldSave() bool
-	Save(checkpoint *ExtractorCheckpoint) AfterSaveAction
+	ShouldSave(copiedBytes int64) bool
+	Save(checkpoint *ExtractorCheckpoint) (AfterSaveAction, error)
 }
 
 type Extractor interface {
@@ -37,10 +37,10 @@ func NopSaveConsumer() SaveConsumer {
 	return &nopSaveConsumer{}
 }
 
-func (nsc *nopSaveConsumer) ShouldSave() bool {
+func (nsc *nopSaveConsumer) ShouldSave(n int64) bool {
 	return false
 }
 
-func (nsc *nopSaveConsumer) Save(checkpoint *ExtractorCheckpoint) AfterSaveAction {
-	return AfterSaveContinue
+func (nsc *nopSaveConsumer) Save(checkpoint *ExtractorCheckpoint) (AfterSaveAction, error) {
+	return AfterSaveContinue, nil
 }
