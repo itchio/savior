@@ -1,5 +1,7 @@
 # savior
 
+[![Build Status](https://travis-ci.org/itchio/savior.svg?branch=master)](https://travis-ci.org/itchio/savior)
+
 savior is an optimistic attempt at providing an abstract layer over
 various compression formats (like deflate, gzip, bzip2) and containers (like zip, tar, etc.)
 all while providing reasonably good save/resume support.
