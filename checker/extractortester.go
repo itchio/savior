@@ -28,9 +28,21 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 			return savior.AfterSaveStop, nil
 		}
 
-		// log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
+		savior.Debugf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
 		return savior.AfterSaveContinue, nil
 	})
+
+	var numProgressCalls int64
+	var numJumpbacks int64
+	var lastProgress float64
+	pl := func(progress float64) {
+		if progress < lastProgress {
+			numJumpbacks++
+			log.Printf("mh, progress jumped back from %.2f to %.2f", lastProgress*100, progress*100)
+		}
+		lastProgress = progress
+		numProgressCalls++
+	}
 
 	startTime := time.Now()
 
@@ -44,6 +56,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 
 		ex := makeExtractor()
 		ex.SetSaveConsumer(sc)
+		ex.SetProgressListener(pl)
 
 		if c == nil {
 			savior.Debugf("→ first resume")
@@ -70,6 +83,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 		} else {
 			log.Printf(" ⇒ no resumes")
 		}
+		log.Printf(" ⇒ progress called %d times, %d jumpbacks", numProgressCalls, numJumpbacks)
 
 		break
 	}

@@ -25,6 +25,7 @@ type ZipExtractor struct {
 	readerSize int64
 
 	sc savior.SaveConsumer
+	pl savior.ProgressListener
 
 	flateThreshold int64
 }
@@ -37,11 +38,16 @@ func New(reader io.ReaderAt, readerSize int64, sink savior.Sink) *ZipExtractor {
 		readerSize: readerSize,
 		sink:       sink,
 		sc:         savior.NopSaveConsumer(),
+		pl:         savior.NopProgressListener(),
 	}
 }
 
 func (ze *ZipExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
 	ze.sc = sc
+}
+
+func (ze *ZipExtractor) SetProgressListener(pl savior.ProgressListener) {
+	ze.pl = pl
 }
 
 func (ze *ZipExtractor) SetFlateThreshold(flateThreshold int64) {
@@ -187,6 +193,11 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 						return errors.Wrap(err, 0)
 					}
 
+					computeProgress := func() float64 {
+						actualDoneBytes := doneBytes + entry.WriteOffset
+						return float64(actualDoneBytes) / float64(totalBytes)
+					}
+
 					copyRes, err := savior.CopyWithSaver(&savior.CopyParams{
 						Src:   src,
 						Dst:   writer,
@@ -210,15 +221,20 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 								return nil, errors.Wrap(err, 0)
 							}
 
-							actualDoneBytes := doneBytes + entry.WriteOffset
-							checkpoint.Progress = float64(actualDoneBytes) / float64(totalBytes)
+							checkpoint.Progress = computeProgress()
 
 							return checkpoint, nil
+						},
+
+						EmitProgress: func() {
+							ze.pl(computeProgress())
 						},
 					})
 					if err != nil {
 						return errors.Wrap(err, 0)
 					}
+
+					ze.pl(computeProgress())
 
 					if copyRes.Action == savior.AfterSaveStop {
 						stop = true

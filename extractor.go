@@ -40,8 +40,17 @@ type SaveConsumer interface {
 	Save(checkpoint *ExtractorCheckpoint) (AfterSaveAction, error)
 }
 
+type ProgressListener func(progress float64)
+
+func NopProgressListener() ProgressListener {
+	return func(progress float64) {
+		// muffin
+	}
+}
+
 type Extractor interface {
 	SetSaveConsumer(saveConsumer SaveConsumer)
+	SetProgressListener(progressListener ProgressListener)
 	Resume(checkpoint *ExtractorCheckpoint) (*ExtractorResult, error)
 	ResumeSupport() ResumeSupport
 }
