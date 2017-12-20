@@ -23,7 +23,6 @@ type ZipExtractor struct {
 
 	reader     io.ReaderAt
 	readerSize int64
-	zr         *zip.Reader
 
 	sc savior.SaveConsumer
 
@@ -56,11 +55,10 @@ func (ze *ZipExtractor) FlateThreshold() int64 {
 	return defaultFlateThreshold
 }
 
-func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
-	var err error
-	ze.zr, err = zip.NewReader(ze.reader, ze.readerSize)
+func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.ExtractorResult, error) {
+	zr, err := zip.NewReader(ze.reader, ze.readerSize)
 	if err != nil {
-		return errors.Wrap(err, 0)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	if checkpoint == nil {
@@ -70,11 +68,11 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 	}
 
 	stop := false
-	numEntries := int64(len(ze.zr.File))
+	numEntries := int64(len(zr.File))
 
 	var doneBytes int64
 	var totalBytes int64
-	for i, zf := range ze.zr.File {
+	for i, zf := range zr.File {
 		size := int64(zf.UncompressedSize64)
 		totalBytes += size
 		if int64(i) < checkpoint.EntryIndex {
@@ -84,34 +82,17 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 
 	for entryIndex := checkpoint.EntryIndex; entryIndex < numEntries; entryIndex++ {
 		if stop {
-			return savior.StopErr
+			return nil, savior.StopErr
 		}
 
 		savior.Debugf(`doing entryIndex %d`, entryIndex)
-		zf := ze.zr.File[entryIndex]
+		zf := zr.File[entryIndex]
 
 		err := func() error {
 			checkpoint.EntryIndex = entryIndex
 
 			if checkpoint.Entry == nil {
-				savior.Debugf("making fresh savior.Entry for index %d", entryIndex)
-				entry := &savior.Entry{
-					CanonicalPath:    filepath.ToSlash(zf.Name),
-					CompressedSize:   int64(zf.CompressedSize64),
-					UncompressedSize: int64(zf.UncompressedSize64),
-					Mode:             zf.Mode(),
-				}
-
-				info := zf.FileInfo()
-
-				if info.IsDir() {
-					entry.Kind = savior.EntryKindDir
-				} else if entry.Mode&os.ModeSymlink > 0 {
-					entry.Kind = savior.EntryKindSymlink
-				} else {
-					entry.Kind = savior.EntryKindFile
-				}
-				checkpoint.Entry = entry
+				checkpoint.Entry = zipFileEntry(zf)
 			}
 			entry := checkpoint.Entry
 
@@ -250,12 +231,37 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 			return nil
 		}()
 		if err != nil {
-			return errors.Wrap(err, 0)
+			return nil, errors.Wrap(err, 0)
 		}
 
 		checkpoint.SourceCheckpoint = nil
 		checkpoint.Entry = nil
 	}
 
-	return nil
+	res := &savior.ExtractorResult{}
+	for _, zf := range zr.File {
+		res.Entries = append(res.Entries, zipFileEntry(zf))
+	}
+
+	return res, nil
+}
+
+func zipFileEntry(zf *zip.File) *savior.Entry {
+	entry := &savior.Entry{
+		CanonicalPath:    filepath.ToSlash(zf.Name),
+		CompressedSize:   int64(zf.CompressedSize64),
+		UncompressedSize: int64(zf.UncompressedSize64),
+		Mode:             zf.Mode(),
+	}
+
+	info := zf.FileInfo()
+
+	if info.IsDir() {
+		entry.Kind = savior.EntryKindDir
+	} else if entry.Mode&os.ModeSymlink > 0 {
+		entry.Kind = savior.EntryKindSymlink
+	} else {
+		entry.Kind = savior.EntryKindFile
+	}
+	return entry
 }

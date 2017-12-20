@@ -3,8 +3,8 @@ package checker
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"log"
-	"reflect"
 	"testing"
 	"time"
 
@@ -17,12 +17,14 @@ type ShouldSaveFunc func() bool
 
 func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave ShouldSaveFunc) {
 	var c *savior.ExtractorCheckpoint
+	var totalCheckpointSize int64
 
 	sc := NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
 		if shouldSave() {
 			c2, checkpointSize := roundtripEThroughGob(t, checkpoint)
-			log.Printf("↓ #%d [%.2f%%] (%s checkpoint)", c2.EntryIndex, c2.Progress*100, humanize.IBytes(uint64(checkpointSize)))
+			totalCheckpointSize += int64(checkpointSize)
 			c = c2
+			log.Printf("↓ saved @ %.0f%% (%s checkpoint)", c.Progress*100, humanize.IBytes(uint64(checkpointSize)))
 			return savior.AfterSaveStop, nil
 		}
 
@@ -44,15 +46,11 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 		ex.SetSaveConsumer(sc)
 
 		if c == nil {
-			log.Printf("→ First resume")
+			savior.Debugf("→ first resume")
 		} else {
-			if c.SourceCheckpoint == nil {
-				log.Printf("↻ #%d [%.2f%%]", c.EntryIndex, c.Progress*100)
-			} else {
-				log.Printf("↻ #%d [%.2f%%], %v @ %s", c.EntryIndex, c.Progress*100, reflect.TypeOf(c.SourceCheckpoint.Data), humanize.IBytes(uint64(c.SourceCheckpoint.Offset)))
-			}
+			savior.Debugf("↻ resumed @ %.0f%%", c.Progress*100)
 		}
-		err := ex.Resume(c)
+		res, err := ex.Resume(c)
 		if err != nil {
 			if err == savior.StopErr {
 				numResumes++
@@ -62,11 +60,38 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 		}
 
 		// yay, we did it!
+		totalDuration := time.Since(startTime)
+		pretty, totalBytes := resultStats(res)
+		perSec := humanize.IBytes(uint64(float64(totalBytes) / totalDuration.Seconds()))
+		log.Printf(" ⇒ extracted %s @ %s/s (%s total)", pretty, perSec, totalDuration)
+		if numResumes > 0 {
+			meanCheckpointSize := float64(totalCheckpointSize) / float64(numResumes)
+			log.Printf(" ⇒ %d resumes, %s avg checkpoint", numResumes, humanize.IBytes(uint64(meanCheckpointSize)))
+		} else {
+			log.Printf(" ⇒ no resumes")
+		}
+
 		break
 	}
+}
 
-	totalDuration := time.Since(startTime)
-	log.Printf("Done in %s, total resumes: %d", totalDuration, numResumes)
+func resultStats(res *savior.ExtractorResult) (string, int64) {
+	var numFiles, numDirs, numSymlinks int
+	var totalBytes int64
+	for _, entry := range res.Entries {
+		switch entry.Kind {
+		case savior.EntryKindFile:
+			numFiles++
+		case savior.EntryKindDir:
+			numDirs++
+		case savior.EntryKindSymlink:
+			numSymlinks++
+		}
+		totalBytes += entry.UncompressedSize
+	}
+
+	pretty := fmt.Sprintf("%s (in %d files, %d dirs, %d symlinks)", humanize.IBytes(uint64(totalBytes)), numFiles, numDirs, numSymlinks)
+	return pretty, totalBytes
 }
 
 func roundtripEThroughGob(t *testing.T, c *savior.ExtractorCheckpoint) (*savior.ExtractorCheckpoint, int) {

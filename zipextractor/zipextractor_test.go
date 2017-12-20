@@ -5,14 +5,12 @@ import (
 	"bytes"
 	"log"
 	"os"
-	"reflect"
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/zipextractor"
-	"github.com/mohae/deepcopy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,58 +47,6 @@ func TestZip(t *testing.T) {
 		i++
 		return i%2 == 0
 	})
-}
-
-type shouldSaveFunc func() bool
-
-func testZipExtractor(t *testing.T, source []byte, sink savior.Sink, shouldSave shouldSaveFunc) {
-	var c *savior.ExtractorCheckpoint
-
-	sc := checker.NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
-		if shouldSave() {
-			log.Printf("↓ Saving at #%d", checkpoint.EntryIndex)
-			c = deepcopy.Copy(checkpoint).(*savior.ExtractorCheckpoint)
-			return savior.AfterSaveStop, nil
-		} else {
-			log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
-			return savior.AfterSaveContinue, nil
-		}
-	})
-
-	maxResumes := 24
-	numResumes := 0
-	for {
-		if numResumes > maxResumes {
-			t.Error("Too many resumes, something must be wrong")
-			t.FailNow()
-		}
-
-		ex := zipextractor.New(bytes.NewReader(source), int64(len(source)), sink)
-		ex.SetSaveConsumer(sc)
-
-		if c == nil {
-			log.Printf("→ First resume")
-		} else {
-			if c.SourceCheckpoint == nil {
-				log.Printf("↻ Resuming from #%d", c.EntryIndex)
-			} else {
-				log.Printf("↻ Resuming from #%d, source is at %s :: %v", c.EntryIndex, humanize.IBytes(uint64(c.SourceCheckpoint.Offset)), reflect.TypeOf(c.SourceCheckpoint.Data))
-			}
-		}
-		err := ex.Resume(c)
-		if err != nil {
-			if err == savior.StopErr {
-				numResumes++
-				continue
-			}
-			must(t, err)
-		}
-
-		// yay, we did it!
-		break
-	}
-
-	log.Printf("Total resumes: %d", numResumes)
 }
 
 func makeZip(t *testing.T, sink *checker.Sink) []byte {

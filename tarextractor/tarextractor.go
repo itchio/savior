@@ -18,6 +18,11 @@ type tarExtractor struct {
 	sc savior.SaveConsumer
 }
 
+type TarExtractorState struct {
+	Result        *savior.ExtractorResult
+	TarCheckpoint *tar.Checkpoint
+}
+
 var _ savior.Extractor = (*tarExtractor)(nil)
 
 func New(source savior.Source, sink savior.Sink) savior.Extractor {
@@ -31,42 +36,52 @@ func (te *tarExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
 	te.sc = sc
 }
 
-func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
+func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.ExtractorResult, error) {
 	var sr tar.SaverReader
+	var state *TarExtractorState
 
 	if checkpoint != nil {
-		if tarCheckpoint, ok := checkpoint.Data.(*tar.Checkpoint); ok {
-			if checkpoint.SourceCheckpoint != nil {
+		if stateCheckpoint, ok := checkpoint.Data.(*TarExtractorState); ok {
+			if checkpoint.SourceCheckpoint != nil && stateCheckpoint.Result != nil && stateCheckpoint.TarCheckpoint != nil {
 				savior.Debugf("tarextractor: resuming source from %d", checkpoint.SourceCheckpoint.Offset)
 				offset, err := te.source.Resume(checkpoint.SourceCheckpoint)
 				if err != nil {
-					return errors.Wrap(err, 0)
+					return nil, errors.Wrap(err, 0)
 				}
 
+				tarCheckpoint := stateCheckpoint.TarCheckpoint
 				if offset < tarCheckpoint.Roffset {
 					delta := tarCheckpoint.Roffset - offset
 					savior.Debugf("tarextractor: discarding %d bytes to align source and tar checkpoint", delta)
 					savior.Debugf("tarextractor: source was at %d, tar checkpoint was at %d", offset, tarCheckpoint.Roffset)
 					err = savior.DiscardByRead(te.source, delta)
 					if err != nil {
-						return errors.Wrap(err, 0)
+						return nil, errors.Wrap(err, 0)
 					}
 				}
 
 				sr, err = tarCheckpoint.Resume(te.source)
 				if err != nil {
-					return errors.Wrap(err, 0)
+					return nil, errors.Wrap(err, 0)
 				}
+
+				state = stateCheckpoint
 			}
 		}
-	} else {
-		savior.Debugf("tarextractor: starting fresh!")
 	}
 
 	if sr == nil {
+		savior.Debugf("tarextractor: starting fresh!")
+
+		state = &TarExtractorState{
+			Result: &savior.ExtractorResult{
+				Entries: []*savior.Entry{},
+			},
+		}
+
 		_, err := te.source.Resume(nil)
 		if err != nil {
-			return errors.Wrap(err, 0)
+			return nil, errors.Wrap(err, 0)
 		}
 
 		checkpoint = &savior.ExtractorCheckpoint{
@@ -75,7 +90,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 
 		sr, err = tar.NewSaverReader(te.source)
 		if err != nil {
-			return errors.Wrap(err, 0)
+			return nil, errors.Wrap(err, 0)
 		}
 	}
 
@@ -84,7 +99,10 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 	entryIndex := checkpoint.EntryIndex
 	for {
 		if stop {
-			return stopErr
+			if stopErr == nil {
+				return state.Result, nil
+			}
+			return nil, stopErr
 		}
 
 		err := func() error {
@@ -168,9 +186,12 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 						}
 						savior.Debugf("tarextractor: at checkpoint, tar read offset is %s", humanize.IBytes(uint64(tarCheckpoint.Roffset)))
 
+						state.TarCheckpoint = tarCheckpoint
+
 						checkpoint.SourceCheckpoint = sourceCheckpoint
-						checkpoint.Data = tarCheckpoint
+						checkpoint.Data = state
 						checkpoint.Progress = te.source.Progress()
+
 						return checkpoint, nil
 					},
 				})
@@ -183,6 +204,8 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 					stopErr = savior.StopErr
 					return nil
 				}
+
+				state.Result.Entries = append(state.Result.Entries, entry)
 			}
 
 			checkpoint.Entry = nil
@@ -192,11 +215,12 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 			return nil
 		}()
 		if err != nil {
-			return errors.Wrap(err, 0)
+			return nil, errors.Wrap(err, 0)
 		}
 	}
 }
 
 func init() {
+	gob.Register(&TarExtractorState{})
 	gob.Register(&tar.Checkpoint{})
 }

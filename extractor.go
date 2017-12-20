@@ -10,6 +10,10 @@ type ExtractorCheckpoint struct {
 	Data             interface{}
 }
 
+type ExtractorResult struct {
+	Entries []*Entry
+}
+
 type AfterSaveAction int
 
 const (
@@ -24,7 +28,7 @@ type SaveConsumer interface {
 
 type Extractor interface {
 	SetSaveConsumer(saveConsumer SaveConsumer)
-	Resume(checkpoint *ExtractorCheckpoint) error
+	Resume(checkpoint *ExtractorCheckpoint) (*ExtractorResult, error)
 }
 
 func init() {
