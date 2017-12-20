@@ -19,7 +19,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 	var c *savior.ExtractorCheckpoint
 	var totalCheckpointSize int64
 
-	sc := NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
+	sc := NewTestSaveConsumer(1*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
 		if shouldSave() {
 			c2, checkpointSize := roundtripEThroughGob(t, checkpoint)
 			totalCheckpointSize += int64(checkpointSize)

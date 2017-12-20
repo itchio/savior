@@ -8,7 +8,6 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/itchio/arkive/tar"
 	"github.com/itchio/savior"
-	"github.com/itchio/savior/offsetsource"
 )
 
 type tarExtractor struct {
@@ -42,8 +41,10 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 
 	if checkpoint != nil {
 		if stateCheckpoint, ok := checkpoint.Data.(*TarExtractorState); ok {
-			if checkpoint.SourceCheckpoint != nil && stateCheckpoint.Result != nil && stateCheckpoint.TarCheckpoint != nil {
-				savior.Debugf("tarextractor: resuming source from %d", checkpoint.SourceCheckpoint.Offset)
+			if stateCheckpoint.Result != nil && stateCheckpoint.TarCheckpoint != nil {
+				if checkpoint.SourceCheckpoint != nil {
+					savior.Debugf("tarextractor: resuming source from %d", checkpoint.SourceCheckpoint.Offset)
+				}
 				offset, err := te.source.Resume(checkpoint.SourceCheckpoint)
 				if err != nil {
 					return nil, errors.Wrap(err, 0)
@@ -164,11 +165,9 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 				}
 				defer w.Close()
 
-				ofs := offsetsource.New(sr, entry.WriteOffset, entry.CompressedSize)
-
 				copyRes, err := savior.CopyWithSaver(&savior.CopyParams{
 					Dst:   w,
-					Src:   ofs,
+					Src:   sr,
 					Entry: entry,
 
 					SaveConsumer: te.sc,
@@ -178,7 +177,9 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 						if err != nil {
 							return nil, errors.Wrap(err, 0)
 						}
-						savior.Debugf("tarextractor: at checkpoint, source is at %s", humanize.IBytes(uint64(sourceCheckpoint.Offset)))
+						if sourceCheckpoint != nil {
+							savior.Debugf("tarextractor: at checkpoint, source is at %s", humanize.IBytes(uint64(sourceCheckpoint.Offset)))
+						}
 
 						tarCheckpoint, err := sr.Save()
 						if err != nil {

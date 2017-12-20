@@ -15,7 +15,7 @@ type CopyResult struct {
 }
 
 type CopyParams struct {
-	Src   Source
+	Src   io.Reader
 	Dst   io.Writer
 	Entry *Entry
 
