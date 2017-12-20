@@ -6,26 +6,41 @@ type ExtractorCheckpoint struct {
 	SourceCheckpoint *SourceCheckpoint
 	EntryIndex       int64
 	Entry            *Entry
+	Data             interface{}
 }
 
-type ExtractorSaver interface {
-	Save(c *ExtractorCheckpoint)
-}
+type AfterSaveAction int
 
-type ProgressFunc func(progress float64)
+const (
+	AfterSaveContinue AfterSaveAction = 1
+	AfterSaveStop     AfterSaveAction = 2
+)
 
-type ExtractorParams struct {
-	Source         Source
-	LastCheckpoint *ExtractorCheckpoint
-	OnProgress     ProgressFunc
-	Sink           Sink
+type SaveConsumer interface {
+	ShouldSave() bool
+	Save(checkpoint *ExtractorCheckpoint) AfterSaveAction
 }
 
 type Extractor interface {
-	Configure(params *ExtractorParams) error
-	Work() error
+	Resume(checkpoint *ExtractorCheckpoint) error
 }
 
 func init() {
 	gob.Register(&ExtractorCheckpoint{})
+}
+
+type nopSaveConsumer struct{}
+
+var _ SaveConsumer = (*nopSaveConsumer)(nil)
+
+func NopSaveConsumer() SaveConsumer {
+	return &nopSaveConsumer{}
+}
+
+func (nsc *nopSaveConsumer) ShouldSave() bool {
+	return false
+}
+
+func (nsc *nopSaveConsumer) Save(checkpoint *ExtractorCheckpoint) AfterSaveAction {
+	return AfterSaveContinue
 }

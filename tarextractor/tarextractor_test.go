@@ -2,16 +2,13 @@ package tarextractor_test
 
 import (
 	"bytes"
-	"fmt"
 	"log"
-	"math/rand"
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior/bzip2source"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/gzipsource"
-	"github.com/itchio/savior/semirandom"
 
 	"github.com/itchio/arkive/tar"
 	"github.com/itchio/savior"
@@ -29,42 +26,7 @@ func must(t *testing.T, err error) {
 }
 
 func TestTar(t *testing.T) {
-	sink := checker.NewSink()
-	rng := rand.New(rand.NewSource(0xf617a899))
-	for i := 0; i < 20; i++ {
-		if rng.Intn(100) < 20 {
-			// ok, make a symlink
-			name := fmt.Sprintf("symlink-%d", i)
-			sink.Items[name] = &checker.Item{
-				Entry: &savior.Entry{
-					CanonicalPath: name,
-					Kind:          savior.EntryKindDir,
-				},
-				Linkname: fmt.Sprintf("target-%d", i*2),
-			}
-		} else if rng.Intn(100) < 40 {
-			// ok, make a dir
-			name := fmt.Sprintf("dir-%d", i)
-			sink.Items[name] = &checker.Item{
-				Entry: &savior.Entry{
-					CanonicalPath: name,
-					Kind:          savior.EntryKindDir,
-				},
-			}
-		} else {
-			// ok, make a file
-			size := rng.Int63n(4 * 1024 * 1024)
-			name := fmt.Sprintf("file-%d", i)
-			sink.Items[name] = &checker.Item{
-				Entry: &savior.Entry{
-					CanonicalPath:    name,
-					Kind:             savior.EntryKindFile,
-					UncompressedSize: size,
-				},
-				Data: semirandom.Bytes(size),
-			}
-		}
-	}
+	sink := checker.MakeTestSink()
 
 	log.Printf("Making tar from checker.Sink...")
 	tarBytes := makeTar(t, sink)
@@ -88,16 +50,9 @@ func TestTar(t *testing.T) {
 }
 
 func testTarExtractor(t *testing.T, source savior.Source, sink savior.Sink) {
-	ex := tarextractor.New()
-	err := ex.Configure(&savior.ExtractorParams{
-		LastCheckpoint: nil,
-		OnProgress:     nil,
-		Source:         source,
-		Sink:           sink,
-	})
-	must(t, err)
+	ex := tarextractor.New(source, sink)
 
-	err = ex.Work()
+	err := ex.Resume(nil)
 	must(t, err)
 }
 

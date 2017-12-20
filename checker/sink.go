@@ -81,7 +81,7 @@ func (cs *Sink) withItem(entry *savior.Entry, actualKind savior.EntryKind, cb wi
 
 	expectedKind := item.Entry.Kind
 	if item.Entry.Kind != actualKind {
-		err := fmt.Errorf("%s: expected kind %v, got %v", expectedKind, actualKind)
+		err := fmt.Errorf("%s: expected kind %v, got %v", entry.CanonicalPath, expectedKind, actualKind)
 		return errors.Wrap(err, 0)
 	}
 

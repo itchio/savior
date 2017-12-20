@@ -11,28 +11,33 @@ import (
 type tarExtractor struct {
 	source savior.Source
 	sink   savior.Sink
+
+	sc savior.SaveConsumer
 }
 
 var _ savior.Extractor = (*tarExtractor)(nil)
 
-func New() savior.Extractor {
-	return &tarExtractor{}
+func New(source savior.Source, sink savior.Sink) savior.Extractor {
+	return &tarExtractor{
+		source: source,
+		sink:   sink,
+	}
 }
 
-func (te *tarExtractor) Configure(params *savior.ExtractorParams) error {
-	source := params.Source
+func (te *tarExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
+	te.sc = sc
+}
 
-	_, err := source.Resume(nil)
+func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
+	if checkpoint != nil {
+		return errors.New("tarextractor: cannot resume from checkpoint yet (stub)")
+	}
+
+	_, err := te.source.Resume(nil)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
-	te.source = source
-	te.sink = params.Sink
-	return nil
-}
-
-func (te *tarExtractor) Work() error {
 	sr, err := tar.NewSaverReader(te.source)
 	if err != nil {
 		return errors.Wrap(err, 0)
