@@ -31,29 +31,42 @@ func TestTar(t *testing.T) {
 	log.Printf("Making tar from checker.Sink...")
 	tarBytes := makeTar(t, sink)
 	source := seeksource.FromBytes(tarBytes)
-	log.Printf("Testing .tar (%s)", humanize.IBytes(uint64(len(tarBytes))))
-	testTarExtractor(t, source, sink)
+	testTarVariants(t, ".tar", int64(len(tarBytes)), source, sink)
 
 	log.Printf("Compressing with gzip...")
 	gzipBytes, err := checker.GzipCompress(tarBytes)
 	must(t, err)
 	gzipSource := gzipsource.New(seeksource.FromBytes(gzipBytes), 1*1024*1024)
-	log.Printf("Testing .tar.gz (%s)", humanize.IBytes(uint64(len(gzipBytes))))
-	testTarExtractor(t, gzipSource, sink)
+	testTarVariants(t, ".tar.gz", int64(len(gzipBytes)), gzipSource, sink)
 
 	log.Printf("Compressing with bzip2...")
 	bzip2Bytes, err := checker.Bzip2Compress(tarBytes)
 	must(t, err)
 	bzip2Source := bzip2source.New(seeksource.FromBytes(bzip2Bytes), 1*1024*1024)
-	log.Printf("Testing .tar.bz2 (%s)", humanize.IBytes(uint64(len(bzip2Bytes))))
-	testTarExtractor(t, bzip2Source, sink)
+	testTarVariants(t, ".tar.bz2", int64(len(bzip2Bytes)), bzip2Source, sink)
 }
 
-func testTarExtractor(t *testing.T, source savior.Source, sink savior.Sink) {
-	ex := tarextractor.New(source, sink)
+func testTarVariants(t *testing.T, ext string, size int64, source savior.Source, sink savior.Sink) {
+	makeExtractor := func() savior.Extractor {
+		return tarextractor.New(source, sink)
+	}
 
-	err := ex.Resume(nil)
-	must(t, err)
+	log.Printf("Testing .tar (%s), no resumes", humanize.IBytes(uint64(size)))
+	checker.RunExtractorText(t, makeExtractor, func() bool {
+		return false
+	})
+
+	log.Printf("Testing .tar (%s), all resumes", humanize.IBytes(uint64(size)))
+	checker.RunExtractorText(t, makeExtractor, func() bool {
+		return true
+	})
+
+	log.Printf("Testing .tar (%s), every other resume", humanize.IBytes(uint64(size)))
+	i := 0
+	checker.RunExtractorText(t, makeExtractor, func() bool {
+		i++
+		return i%2 == 0
+	})
 }
 
 func makeTar(t *testing.T, sink *checker.Sink) []byte {

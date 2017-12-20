@@ -25,7 +25,7 @@ type CopyParams struct {
 }
 
 func CopyWithSaver(params *CopyParams) (*CopyResult, error) {
-	buf := make([]byte, 8*1024)
+	buf := make([]byte, 32*1024)
 
 	for {
 		n, readErr := params.Src.Read(buf)

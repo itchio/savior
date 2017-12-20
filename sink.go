@@ -39,6 +39,10 @@ type Entry struct {
 	// WriteOffset is useful if this entry struct is included in an extractor
 	// checkpoint
 	WriteOffset int64
+
+	// Linkname describes the target of a symlink if the entry is a symlink
+	// and the format we're extracting has symlinks in metadata rather than its contents
+	Linkname string
 }
 
 // An EntryWriter is an io.WriteCloser that you can Sync().

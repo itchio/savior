@@ -3,9 +3,11 @@ package tarextractor
 import (
 	"io"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/go-errors/errors"
 	"github.com/itchio/arkive/tar"
 	"github.com/itchio/savior"
+	"github.com/itchio/savior/offsetsource"
 )
 
 type tarExtractor struct {
@@ -29,80 +31,166 @@ func (te *tarExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
 }
 
 func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
+	var sr tar.SaverReader
+
 	if checkpoint != nil {
-		return errors.New("tarextractor: cannot resume from checkpoint yet (stub)")
-	}
+		if tarCheckpoint, ok := checkpoint.Data.(*tar.Checkpoint); ok {
+			if checkpoint.SourceCheckpoint != nil {
+				savior.Debugf("tarextractor: resuming source from %d", checkpoint.SourceCheckpoint.Offset)
+				offset, err := te.source.Resume(checkpoint.SourceCheckpoint)
+				if err != nil {
+					return errors.Wrap(err, 0)
+				}
 
-	_, err := te.source.Resume(nil)
-	if err != nil {
-		return errors.Wrap(err, 0)
-	}
+				if offset < tarCheckpoint.Roffset {
+					delta := tarCheckpoint.Roffset - offset
+					savior.Debugf("tarextractor: discarding %d bytes to align source and tar checkpoint", delta)
+					savior.Debugf("tarextractor: source was at %d, tar checkpoint was at %d", offset, tarCheckpoint.Roffset)
+					err = savior.DiscardByRead(te.source, delta)
+					if err != nil {
+						return errors.Wrap(err, 0)
+					}
+				}
 
-	sr, err := tar.NewSaverReader(te.source)
-	if err != nil {
-		return errors.Wrap(err, 0)
-	}
-
-	for {
-		hdr, err := sr.Next()
-		if err != nil {
-			if err == io.EOF {
-				// we done!
-				return nil
+				sr, err = tarCheckpoint.Resume(te.source)
+				if err != nil {
+					return errors.Wrap(err, 0)
+				}
 			}
+		}
+	} else {
+		savior.Debugf("tarextractor: starting fresh!")
+	}
+
+	if sr == nil {
+		_, err := te.source.Resume(nil)
+		if err != nil {
 			return errors.Wrap(err, 0)
 		}
 
-		entry := &savior.Entry{
-			CanonicalPath:    hdr.Name,
-			UncompressedSize: hdr.Size,
+		checkpoint = &savior.ExtractorCheckpoint{
+			EntryIndex: 0,
 		}
 
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			entry.Kind = savior.EntryKindDir
-		case tar.TypeSymlink:
-			entry.Kind = savior.EntryKindSymlink
-		case tar.TypeReg:
-			entry.Kind = savior.EntryKindFile
-		default:
-			// let's just ignore that one..
-			continue
+		sr, err = tar.NewSaverReader(te.source)
+		if err != nil {
+			return errors.Wrap(err, 0)
+		}
+	}
+
+	stop := false
+	var stopErr error
+	entryIndex := checkpoint.EntryIndex
+	for {
+		if stop {
+			return stopErr
 		}
 
-		// if we were resuming, it'd be here
+		err := func() error {
+			checkpoint.EntryIndex = entryIndex
+			entryIndex++
 
-		switch entry.Kind {
-		case savior.EntryKindDir:
-			savior.Debugf(`tar: extracting dir %s`, entry.CanonicalPath)
-			err := te.sink.Mkdir(entry)
-			if err != nil {
-				return errors.Wrap(err, 0)
+			if checkpoint.Entry == nil {
+				hdr, err := sr.Next()
+				if err != nil {
+					if err == io.EOF {
+						// we done!
+						stop = true
+						return nil
+					}
+					return errors.Wrap(err, 0)
+				}
+
+				entry := &savior.Entry{
+					CanonicalPath:    hdr.Name,
+					UncompressedSize: hdr.Size,
+				}
+
+				switch hdr.Typeflag {
+				case tar.TypeDir:
+					entry.Kind = savior.EntryKindDir
+				case tar.TypeSymlink:
+					entry.Kind = savior.EntryKindSymlink
+					entry.Linkname = hdr.Linkname
+				case tar.TypeReg:
+					entry.Kind = savior.EntryKindFile
+				default:
+					// let's just ignore that one..
+					return nil
+				}
+				checkpoint.Entry = entry
 			}
-		case savior.EntryKindSymlink:
-			savior.Debugf(`tar: extracting symlink %s`, entry.CanonicalPath)
-			err := te.sink.Symlink(entry, hdr.Linkname)
-			if err != nil {
-				return errors.Wrap(err, 0)
-			}
-		case savior.EntryKindFile:
-			savior.Debugf(`tar: extracting file %s`, entry.CanonicalPath)
-			err := (func() error {
+			entry := checkpoint.Entry
+
+			// if we were resuming, it'd be here
+
+			switch entry.Kind {
+			case savior.EntryKindDir:
+				savior.Debugf(`tar: extracting dir %s`, entry.CanonicalPath)
+				err := te.sink.Mkdir(entry)
+				if err != nil {
+					return errors.Wrap(err, 0)
+				}
+			case savior.EntryKindSymlink:
+				savior.Debugf(`tar: extracting symlink %s`, entry.CanonicalPath)
+				err := te.sink.Symlink(entry, entry.Linkname)
+				if err != nil {
+					return errors.Wrap(err, 0)
+				}
+			case savior.EntryKindFile:
+				savior.Debugf(`tar: extracting file %s`, entry.CanonicalPath)
 				w, err := te.sink.GetWriter(entry)
 				if err != nil {
 					return errors.Wrap(err, 0)
 				}
 				defer w.Close()
 
-				_, err = io.Copy(w, sr)
+				ofs := offsetsource.New(sr, entry.WriteOffset, entry.CompressedSize)
+
+				copyRes, err := savior.CopyWithSaver(&savior.CopyParams{
+					Dst:   w,
+					Src:   ofs,
+					Entry: entry,
+
+					SaveConsumer: te.sc,
+					MakeCheckpoint: func() (*savior.ExtractorCheckpoint, error) {
+						savior.Debugf("tarextractor: making checkpoint at entry %d", checkpoint.EntryIndex)
+						sourceCheckpoint, err := te.source.Save()
+						if err != nil {
+							return nil, errors.Wrap(err, 0)
+						}
+						savior.Debugf("tarextractor: at checkpoint, source is at %s", humanize.IBytes(uint64(sourceCheckpoint.Offset)))
+
+						tarCheckpoint, err := sr.Save()
+						if err != nil {
+							return nil, errors.Wrap(err, 0)
+						}
+						savior.Debugf("tarextractor: at checkpoint, tar read offset is %s", humanize.IBytes(uint64(tarCheckpoint.Roffset)))
+
+						checkpoint.SourceCheckpoint = sourceCheckpoint
+						checkpoint.Data = tarCheckpoint
+						return checkpoint, nil
+					},
+				})
 				if err != nil {
 					return errors.Wrap(err, 0)
 				}
-				return nil
-			})()
-			if err != nil {
-				return errors.Wrap(err, 0)
+
+				if copyRes.Action == savior.AfterSaveStop {
+					stop = true
+					stopErr = savior.StopErr
+					return nil
+				}
 			}
+
+			checkpoint.Entry = nil
+			checkpoint.SourceCheckpoint = nil
+			checkpoint.Data = nil
+
+			return nil
+		}()
+		if err != nil {
+			return errors.Wrap(err, 0)
 		}
 	}
 }
