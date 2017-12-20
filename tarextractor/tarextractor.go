@@ -1,6 +1,7 @@
 package tarextractor
 
 import (
+	"encoding/gob"
 	"io"
 
 	humanize "github.com/dustin/go-humanize"
@@ -193,4 +194,8 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) error {
 			return errors.Wrap(err, 0)
 		}
 	}
+}
+
+func init() {
+	gob.Register(&tar.Checkpoint{})
 }

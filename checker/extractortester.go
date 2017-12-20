@@ -1,13 +1,14 @@
 package checker
 
 import (
+	"bytes"
+	"encoding/gob"
 	"log"
 	"reflect"
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
-	"github.com/mohae/deepcopy"
 )
 
 type MakeExtractorFunc func() savior.Extractor
@@ -18,13 +19,14 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 
 	sc := NewTestSaveConsumer(3*1024*1024, func(checkpoint *savior.ExtractorCheckpoint) (savior.AfterSaveAction, error) {
 		if shouldSave() {
-			log.Printf("↓ Saving at #%d", checkpoint.EntryIndex)
-			c = deepcopy.Copy(checkpoint).(*savior.ExtractorCheckpoint)
+			c2, checkpointSize := roundtripEThroughGob(t, checkpoint)
+			log.Printf("↓ Saved at #%d (%s checkpoint)", c2.EntryIndex, humanize.IBytes(uint64(checkpointSize)))
+			c = c2
 			return savior.AfterSaveStop, nil
-		} else {
-			log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
-			return savior.AfterSaveContinue, nil
 		}
+
+		log.Printf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
+		return savior.AfterSaveContinue, nil
 	})
 
 	maxResumes := 24
@@ -61,4 +63,19 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 	}
 
 	log.Printf("Total resumes: %d", numResumes)
+}
+
+func roundtripEThroughGob(t *testing.T, c *savior.ExtractorCheckpoint) (*savior.ExtractorCheckpoint, int) {
+	saveBuf := new(bytes.Buffer)
+	enc := gob.NewEncoder(saveBuf)
+	err := enc.Encode(c)
+	must(t, err)
+
+	buflen := saveBuf.Len()
+
+	c2 := &savior.ExtractorCheckpoint{}
+	err = gob.NewDecoder(saveBuf).Decode(c2)
+	must(t, err)
+
+	return c2, buflen
 }
