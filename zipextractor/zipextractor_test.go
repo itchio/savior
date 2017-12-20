@@ -29,19 +29,23 @@ func TestZip(t *testing.T) {
 	log.Printf("Making zip from checker.Sink...")
 	zipBytes := makeZip(t, sink)
 
+	makeZipExtractor := func() savior.Extractor {
+		return zipextractor.New(bytes.NewReader(zipBytes), int64(len(zipBytes)), sink)
+	}
+
 	log.Printf("Testing .zip (%s), no resumes", humanize.IBytes(uint64(len(zipBytes))))
-	testZipExtractor(t, zipBytes, sink, func() bool {
+	checker.RunExtractorText(t, makeZipExtractor, func() bool {
 		return false
 	})
 
 	log.Printf("Testing .zip (%s), every resume", humanize.IBytes(uint64(len(zipBytes))))
-	testZipExtractor(t, zipBytes, sink, func() bool {
+	checker.RunExtractorText(t, makeZipExtractor, func() bool {
 		return true
 	})
 
 	log.Printf("Testing .zip (%s), every other resume", humanize.IBytes(uint64(len(zipBytes))))
 	i := 0
-	testZipExtractor(t, zipBytes, sink, func() bool {
+	checker.RunExtractorText(t, makeZipExtractor, func() bool {
 		i++
 		return i%2 == 0
 	})

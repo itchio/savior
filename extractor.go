@@ -22,6 +22,7 @@ type SaveConsumer interface {
 }
 
 type Extractor interface {
+	SetSaveConsumer(saveConsumer SaveConsumer)
 	Resume(checkpoint *ExtractorCheckpoint) error
 }
 
