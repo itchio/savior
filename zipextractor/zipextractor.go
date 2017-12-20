@@ -246,6 +246,11 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	return res, nil
 }
 
+func (ze *ZipExtractor) ResumeSupport() savior.ResumeSupport {
+	// zip has great resume support!
+	return savior.ResumeSupportBlock
+}
+
 func zipFileEntry(zf *zip.File) *savior.Entry {
 	entry := &savior.Entry{
 		CanonicalPath:    filepath.ToSlash(zf.Name),

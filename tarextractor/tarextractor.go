@@ -221,6 +221,11 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	}
 }
 
+func (te *tarExtractor) ResumeSupport() savior.ResumeSupport {
+	// tar has great resume support!
+	return savior.ResumeSupportBlock
+}
+
 func init() {
 	gob.Register(&TarExtractorState{})
 	gob.Register(&tar.Checkpoint{})

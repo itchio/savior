@@ -14,6 +14,20 @@ type ExtractorResult struct {
 	Entries []*Entry
 }
 
+type ResumeSupport int
+
+const (
+	// While the extractor exposes Save/Resume, in practice, resuming
+	// will probably waste I/O and processing redoing a lot of work
+	// that was already done, so it's not recommended to run it against
+	// a networked resource
+	ResumeSupportNone ResumeSupport = 0
+	// The extractor can save/resume between each entry, but not in the middle of an entry
+	ResumeSupportEntry ResumeSupport = 1
+	// The extractor can save/resume within an entry, on a deflate/bzip2 block boundary for example
+	ResumeSupportBlock ResumeSupport = 2
+)
+
 type AfterSaveAction int
 
 const (
@@ -29,6 +43,7 @@ type SaveConsumer interface {
 type Extractor interface {
 	SetSaveConsumer(saveConsumer SaveConsumer)
 	Resume(checkpoint *ExtractorCheckpoint) (*ExtractorResult, error)
+	ResumeSupport() ResumeSupport
 }
 
 func init() {
