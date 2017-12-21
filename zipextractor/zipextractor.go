@@ -21,9 +21,9 @@ const defaultFlateThreshold = 1 * 1024 * 1024
 
 type ZipExtractor struct {
 	source savior.Source
+	zr     *zip.Reader
 
-	reader     io.ReaderAt
-	readerSize int64
+	reader io.ReaderAt
 
 	saveConsumer savior.SaveConsumer
 	consumer     *state.Consumer
@@ -33,14 +33,20 @@ type ZipExtractor struct {
 
 var _ savior.Extractor = (*ZipExtractor)(nil)
 
-func New(reader io.ReaderAt, readerSize int64) *ZipExtractor {
-	return &ZipExtractor{
-		reader:     reader,
-		readerSize: readerSize,
+func New(reader io.ReaderAt, readerSize int64) (*ZipExtractor, error) {
+	zr, err := zip.NewReader(reader, readerSize)
+	if err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+
+	ex := &ZipExtractor{
+		reader: reader,
+		zr:     zr,
 
 		saveConsumer: savior.NopSaveConsumer(),
 		consumer:     savior.NopConsumer(),
 	}
+	return ex, nil
 }
 
 func (ze *ZipExtractor) SetSaveConsumer(saveConsumer savior.SaveConsumer) {
@@ -63,10 +69,7 @@ func (ze *ZipExtractor) FlateThreshold() int64 {
 }
 
 func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savior.Sink) (*savior.ExtractorResult, error) {
-	zr, err := zip.NewReader(ze.reader, ze.readerSize)
-	if err != nil {
-		return nil, errors.Wrap(err, 0)
-	}
+	zr := ze.zr
 
 	isFresh := false
 
@@ -99,7 +102,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 		for _, zf := range zr.File {
 			entry := zipFileEntry(zf)
 			if entry.Kind == savior.EntryKindFile {
-				err = sink.Preallocate(entry)
+				err := sink.Preallocate(entry)
 				if err != nil {
 					return nil, errors.Wrap(err, 0)
 				}
@@ -277,6 +280,10 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 
 		checkpoint.SourceCheckpoint = nil
 		checkpoint.Entry = nil
+	}
+
+	if stop {
+		return nil, savior.StopErr
 	}
 
 	res := &savior.ExtractorResult{}

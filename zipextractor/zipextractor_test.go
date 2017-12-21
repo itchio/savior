@@ -20,13 +20,15 @@ func must(t *testing.T, err error) {
 }
 
 func TestZip(t *testing.T) {
-	sink := checker.MakeTestSink()
+	sink := checker.MakeTestSinkAdvanced(40)
 
 	log.Printf("Making zip from checker.Sink...")
 	zipBytes := checker.MakeZip(t, sink)
 
 	makeZipExtractor := func() savior.Extractor {
-		return zipextractor.New(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+		ex, err := zipextractor.New(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+		must(t, err)
+		return ex
 	}
 
 	log.Printf("Testing .zip (%s), no resumes", humanize.IBytes(uint64(len(zipBytes))))

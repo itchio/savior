@@ -62,7 +62,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 
 	startTime := time.Now()
 
-	maxResumes := 24
+	maxResumes := 128
 	numResumes := 0
 	for {
 		if numResumes > maxResumes {
