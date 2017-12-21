@@ -28,6 +28,19 @@ const (
 	ResumeSupportBlock ResumeSupport = 2
 )
 
+func (rs ResumeSupport) String() string {
+	switch rs {
+	case ResumeSupportNone:
+		return "none"
+	case ResumeSupportEntry:
+		return "entry"
+	case ResumeSupportBlock:
+		return "block"
+	default:
+		return "unknown resume support"
+	}
+}
+
 type AfterSaveAction int
 
 const (
