@@ -24,8 +24,8 @@ type ZipExtractor struct {
 	reader     io.ReaderAt
 	readerSize int64
 
-	sc savior.SaveConsumer
-	pl savior.ProgressListener
+	SaveConsumer savior.SaveConsumer
+	pl           savior.ProgressListener
 
 	flateThreshold int64
 }
@@ -34,16 +34,16 @@ var _ savior.Extractor = (*ZipExtractor)(nil)
 
 func New(reader io.ReaderAt, readerSize int64, sink savior.Sink) *ZipExtractor {
 	return &ZipExtractor{
-		reader:     reader,
-		readerSize: readerSize,
-		sink:       sink,
-		sc:         savior.NopSaveConsumer(),
-		pl:         savior.NopProgressListener(),
+		reader:       reader,
+		readerSize:   readerSize,
+		sink:         sink,
+		SaveConsumer: savior.NopSaveConsumer(),
+		pl:           savior.NopProgressListener(),
 	}
 }
 
 func (ze *ZipExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
-	ze.sc = sc
+	ze.SaveConsumer = sc
 }
 
 func (ze *ZipExtractor) SetProgressListener(pl savior.ProgressListener) {
@@ -203,7 +203,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 						Dst:   writer,
 						Entry: entry,
 
-						SaveConsumer: ze.sc,
+						SaveConsumer: ze.SaveConsumer,
 						MakeCheckpoint: func() (*savior.ExtractorCheckpoint, error) {
 							sourceCheckpoint, err := src.Save()
 							if err != nil {

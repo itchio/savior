@@ -14,8 +14,8 @@ type tarExtractor struct {
 	source savior.Source
 	sink   savior.Sink
 
-	sc savior.SaveConsumer
-	pl savior.ProgressListener
+	SaveConsumer savior.SaveConsumer
+	pl           savior.ProgressListener
 }
 
 type TarExtractorState struct {
@@ -27,15 +27,15 @@ var _ savior.Extractor = (*tarExtractor)(nil)
 
 func New(source savior.Source, sink savior.Sink) savior.Extractor {
 	return &tarExtractor{
-		source: source,
-		sink:   sink,
-		sc:     savior.NopSaveConsumer(),
-		pl:     savior.NopProgressListener(),
+		source:       source,
+		sink:         sink,
+		SaveConsumer: savior.NopSaveConsumer(),
+		pl:           savior.NopProgressListener(),
 	}
 }
 
 func (te *tarExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
-	te.sc = sc
+	te.SaveConsumer = sc
 }
 
 func (te *tarExtractor) SetProgressListener(pl savior.ProgressListener) {
@@ -177,7 +177,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 					Src:   sr,
 					Entry: entry,
 
-					SaveConsumer: te.sc,
+					SaveConsumer: te.SaveConsumer,
 					MakeCheckpoint: func() (*savior.ExtractorCheckpoint, error) {
 						savior.Debugf("tarextractor: making checkpoint at entry %d", checkpoint.EntryIndex)
 						sourceCheckpoint, err := te.source.Save()
