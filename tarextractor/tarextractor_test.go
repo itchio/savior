@@ -44,24 +44,24 @@ func TestTar(t *testing.T) {
 	testTarVariants(t, ".tar.bz2", int64(len(bzip2Bytes)), bzip2Source, sink)
 }
 
-func testTarVariants(t *testing.T, ext string, size int64, source savior.Source, sink savior.Sink) {
+func testTarVariants(t *testing.T, ext string, size int64, source savior.Source, sink *checker.Sink) {
 	makeExtractor := func() savior.Extractor {
-		return tarextractor.New(source, sink)
+		return tarextractor.New(source)
 	}
 
 	log.Printf("Testing .tar (%s), no resumes", humanize.IBytes(uint64(size)))
-	checker.RunExtractorText(t, makeExtractor, func() bool {
+	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		return false
 	})
 
 	log.Printf("Testing .tar (%s), all resumes", humanize.IBytes(uint64(size)))
-	checker.RunExtractorText(t, makeExtractor, func() bool {
+	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		return true
 	})
 
 	log.Printf("Testing .tar (%s), every other resume", humanize.IBytes(uint64(size)))
 	i := 0
-	checker.RunExtractorText(t, makeExtractor, func() bool {
+	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		i++
 		return i%2 == 0
 	})

@@ -19,8 +19,8 @@ func MakeTestSink() *Sink {
 				Entry: &savior.Entry{
 					CanonicalPath: name,
 					Kind:          savior.EntryKindDir,
+					Linkname:      fmt.Sprintf("target-%d", i*2),
 				},
-				Linkname: fmt.Sprintf("target-%d", i*2),
 			}
 		} else if rng.Intn(100) < 20 {
 			// ok, make a dir

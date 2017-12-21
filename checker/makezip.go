@@ -49,7 +49,7 @@ func MakeZip(t *testing.T, sink *Sink) []byte {
 			writer, err := zw.CreateHeader(fh)
 			must(t, err)
 
-			_, err = writer.Write([]byte(item.Linkname))
+			_, err = writer.Write([]byte(item.Entry.Linkname))
 			must(t, err)
 		}
 	}

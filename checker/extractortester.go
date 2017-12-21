@@ -11,6 +11,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
 	"github.com/itchio/wharf/state"
+	"github.com/stretchr/testify/assert"
 )
 
 type MakeExtractorFunc func() savior.Extractor
@@ -18,7 +19,7 @@ type ShouldSaveFunc func() bool
 
 var showSaviorConsumerOutput = os.Getenv("SAVIOR_CONSUMER") == "1"
 
-func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave ShouldSaveFunc) {
+func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink, shouldSave ShouldSaveFunc) {
 	var c *savior.ExtractorCheckpoint
 	var totalCheckpointSize int64
 
@@ -34,6 +35,8 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 		savior.Debugf("↷ Skipping over checkpoint at #%d", checkpoint.EntryIndex)
 		return savior.AfterSaveContinue, nil
 	})
+
+	sink.Reset()
 
 	var numProgressCalls int64
 	var numJumpbacks int64
@@ -76,7 +79,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 		} else {
 			savior.Debugf("↻ resumed @ %.0f%%", c.Progress*100)
 		}
-		res, err := ex.Resume(c)
+		res, err := ex.Resume(c, sink)
 		if err != nil {
 			if err == savior.StopErr {
 				numResumes++
@@ -100,6 +103,8 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 
 		break
 	}
+
+	assert.NoError(t, sink.Validate())
 }
 
 func roundtripEThroughGob(t *testing.T, c *savior.ExtractorCheckpoint) (*savior.ExtractorCheckpoint, int) {

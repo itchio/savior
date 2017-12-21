@@ -21,7 +21,6 @@ const defaultFlateThreshold = 1 * 1024 * 1024
 
 type ZipExtractor struct {
 	source savior.Source
-	sink   savior.Sink
 
 	reader     io.ReaderAt
 	readerSize int64
@@ -34,11 +33,10 @@ type ZipExtractor struct {
 
 var _ savior.Extractor = (*ZipExtractor)(nil)
 
-func New(reader io.ReaderAt, readerSize int64, sink savior.Sink) *ZipExtractor {
+func New(reader io.ReaderAt, readerSize int64) *ZipExtractor {
 	return &ZipExtractor{
 		reader:     reader,
 		readerSize: readerSize,
-		sink:       sink,
 
 		saveConsumer: savior.NopSaveConsumer(),
 		consumer:     savior.NopConsumer(),
@@ -64,7 +62,7 @@ func (ze *ZipExtractor) FlateThreshold() int64 {
 	return defaultFlateThreshold
 }
 
-func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.ExtractorResult, error) {
+func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savior.Sink) (*savior.ExtractorResult, error) {
 	zr, err := zip.NewReader(ze.reader, ze.readerSize)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
@@ -101,7 +99,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 		for _, zf := range zr.File {
 			entry := zipFileEntry(zf)
 			if entry.Kind == savior.EntryKindFile {
-				err = ze.sink.Preallocate(entry)
+				err = sink.Preallocate(entry)
 				if err != nil {
 					return nil, errors.Wrap(err, 0)
 				}
@@ -131,7 +129,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 
 			switch entry.Kind {
 			case savior.EntryKindDir:
-				err := ze.sink.Mkdir(entry)
+				err := sink.Mkdir(entry)
 				if err != nil {
 					return errors.Wrap(err, 0)
 				}
@@ -148,7 +146,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 					return errors.Wrap(err, 0)
 				}
 
-				err = ze.sink.Symlink(entry, string(linkname))
+				err = sink.Symlink(entry, string(linkname))
 				if err != nil {
 					return errors.Wrap(err, 0)
 				}
@@ -189,7 +187,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 
 					defer rc.Close()
 
-					writer, err := ze.sink.GetWriter(entry)
+					writer, err := sink.GetWriter(entry)
 					if err != nil {
 						return errors.Wrap(err, 0)
 					}
@@ -215,7 +213,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 					}
 					savior.Debugf(`%s: zipextractor resuming from %s`, entry.CanonicalPath, humanize.IBytes(uint64(entry.WriteOffset)))
 
-					writer, err := ze.sink.GetWriter(entry)
+					writer, err := sink.GetWriter(entry)
 					if err != nil {
 						return errors.Wrap(err, 0)
 					}

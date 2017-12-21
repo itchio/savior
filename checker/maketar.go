@@ -36,7 +36,7 @@ func MakeTar(t *testing.T, sink *Sink) []byte {
 				Name:     item.Entry.CanonicalPath,
 				Typeflag: tar.TypeSymlink,
 				Mode:     0644,
-				Linkname: item.Linkname,
+				Linkname: item.Entry.Linkname,
 			}))
 		}
 	}
