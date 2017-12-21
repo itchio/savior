@@ -9,6 +9,7 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/go-errors/errors"
 	"github.com/itchio/savior"
 	"github.com/itchio/wharf/state"
 	"github.com/stretchr/testify/assert"
@@ -81,7 +82,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 		}
 		res, err := ex.Resume(c, sink)
 		if err != nil {
-			if err == savior.ErrStop {
+			if errors.Is(err, savior.ErrStop) {
 				numResumes++
 				continue
 			}
