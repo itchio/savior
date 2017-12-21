@@ -112,11 +112,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 		ze.consumer.Infof("⇒ Pre-allocated in %s, nothing can stop us now", preallocateDuration)
 	}
 
-	for entryIndex := checkpoint.EntryIndex; entryIndex < numEntries; entryIndex++ {
-		if stop {
-			return nil, savior.StopErr
-		}
-
+	for entryIndex := checkpoint.EntryIndex; entryIndex < numEntries && !stop; entryIndex++ {
 		savior.Debugf(`doing entryIndex %d`, entryIndex)
 		zf := zr.File[entryIndex]
 

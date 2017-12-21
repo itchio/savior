@@ -106,15 +106,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 	stop := false
 	var stopErr error
 	entryIndex := checkpoint.EntryIndex
-	for {
-		if stop {
-			if stopErr == nil {
-				te.consumer.Statf("Extracted %s", state.Result.Stats())
-				return state.Result, nil
-			}
-			return nil, stopErr
-		}
-
+	for !stop {
 		err := func() error {
 			checkpoint.EntryIndex = entryIndex
 			entryIndex++
@@ -233,6 +225,13 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 			return nil, errors.Wrap(err, 0)
 		}
 	}
+
+	if stopErr != nil {
+		return nil, stopErr
+	}
+
+	te.consumer.Statf("Extracted %s", state.Result.Stats())
+	return state.Result, nil
 }
 
 func (te *tarExtractor) Features() savior.ExtractorFeatures {
