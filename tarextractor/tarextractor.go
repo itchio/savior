@@ -111,6 +111,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	for {
 		if stop {
 			if stopErr == nil {
+				te.consumer.Statf("Extracted %s", state.Result.Stats())
 				return state.Result, nil
 			}
 			return nil, stopErr
