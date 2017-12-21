@@ -84,7 +84,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 			log.Printf(" ⇒ no resumes")
 		}
 		log.Printf(" ⇒ progress called %d times, %d jumpbacks", numProgressCalls, numJumpbacks)
-		log.Printf(" ⇒ resume support: %s", ex.ResumeSupport())
+		log.Printf(" ⇒ features: %s", ex.Features())
 
 		break
 	}

@@ -73,6 +73,9 @@ type Sink interface {
 
 	// GetWriter returns a writer at entry.WriteOffset
 	GetWriter(entry *Entry) (EntryWriter, error)
+
+	// Preallocate space for a file based on the entry's UncompressedSize
+	Preallocate(entry *Entry) error
 }
 
 // ===============================

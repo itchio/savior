@@ -1,6 +1,12 @@
 package savior
 
-import "encoding/gob"
+import (
+	"encoding/gob"
+	"errors"
+	"fmt"
+)
+
+var ErrDeviceFull = errors.New("device is full")
 
 type ExtractorCheckpoint struct {
 	SourceCheckpoint *SourceCheckpoint
@@ -12,6 +18,25 @@ type ExtractorCheckpoint struct {
 
 type ExtractorResult struct {
 	Entries []*Entry
+}
+
+type ExtractorFeatures struct {
+	Name          string
+	ResumeSupport ResumeSupport
+	Preallocate   bool
+	RandomAccess  bool
+}
+
+func (ef ExtractorFeatures) String() string {
+	res := fmt.Sprintf("%s: resume=%s", ef.Name, ef.ResumeSupport)
+	if ef.Preallocate {
+		res += " +preallocate"
+	}
+
+	if ef.RandomAccess {
+		res += " +randomaccess"
+	}
+	return res
 }
 
 type ResumeSupport int
@@ -65,7 +90,7 @@ type Extractor interface {
 	SetSaveConsumer(saveConsumer SaveConsumer)
 	SetProgressListener(progressListener ProgressListener)
 	Resume(checkpoint *ExtractorCheckpoint) (*ExtractorResult, error)
-	ResumeSupport() ResumeSupport
+	Features() ExtractorFeatures
 }
 
 func init() {

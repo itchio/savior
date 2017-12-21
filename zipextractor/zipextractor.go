@@ -262,9 +262,14 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	return res, nil
 }
 
-func (ze *ZipExtractor) ResumeSupport() savior.ResumeSupport {
-	// zip has great resume support!
-	return savior.ResumeSupportBlock
+func (ze *ZipExtractor) Features() savior.ExtractorFeatures {
+	// zip has great resume support and is random access!
+	return savior.ExtractorFeatures{
+		Name:          "zip",
+		ResumeSupport: savior.ResumeSupportBlock,
+		Preallocate:   true,
+		RandomAccess:  true,
+	}
 }
 
 func zipFileEntry(zf *zip.File) *savior.Entry {

@@ -62,7 +62,7 @@ func (fs *FolderSink) Mkdir(entry *Entry) error {
 	return nil
 }
 
-func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
+func (fs *FolderSink) createFile(entry *Entry) (*os.File, error) {
 	dstpath := fs.destPath(entry)
 
 	dirname := filepath.Dir(dstpath)
@@ -96,6 +96,15 @@ func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
 		}
 	}
 
+	return f, nil
+}
+
+func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
+	f, err := fs.createFile(entry)
+	if err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+
 	if entry.WriteOffset > 0 {
 		_, err = f.Seek(entry.WriteOffset, io.SeekStart)
 		if err != nil {
@@ -104,6 +113,22 @@ func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
 	}
 
 	return f, nil
+}
+
+func (fs *FolderSink) Preallocate(entry *Entry) error {
+	f, err := fs.createFile(entry)
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	defer f.Close()
+
+	err = f.Truncate(entry.UncompressedSize)
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	return nil
 }
 
 func (fs *FolderSink) Symlink(entry *Entry, linkname string) error {

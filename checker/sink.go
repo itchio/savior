@@ -68,6 +68,13 @@ func (cs *Sink) GetWriter(entry *savior.Entry) (savior.EntryWriter, error) {
 	return ew, nil
 }
 
+func (cs *Sink) Preallocate(entry *savior.Entry) error {
+	return cs.withItem(entry, savior.EntryKindFile, func(item *Item) error {
+		// nothing to do
+		return nil
+	})
+}
+
 // ===============================
 
 type withItemFunc func(item *Item) error
