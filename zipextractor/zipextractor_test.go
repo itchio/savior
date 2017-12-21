@@ -1,10 +1,8 @@
 package zipextractor_test
 
 import (
-	"archive/zip"
 	"bytes"
 	"log"
-	"os"
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
@@ -25,7 +23,7 @@ func TestZip(t *testing.T) {
 	sink := checker.MakeTestSink()
 
 	log.Printf("Making zip from checker.Sink...")
-	zipBytes := makeZip(t, sink)
+	zipBytes := checker.MakeZip(t, sink)
 
 	makeZipExtractor := func() savior.Extractor {
 		return zipextractor.New(bytes.NewReader(zipBytes), int64(len(zipBytes)), sink)
@@ -47,55 +45,4 @@ func TestZip(t *testing.T) {
 		i++
 		return i%2 == 0
 	})
-}
-
-func makeZip(t *testing.T, sink *checker.Sink) []byte {
-	buf := new(bytes.Buffer)
-	zw := zip.NewWriter(buf)
-
-	shouldCompress := true
-	numDeflate := 0
-	numStore := 0
-
-	for _, item := range sink.Items {
-		fh := &zip.FileHeader{
-			Name: item.Entry.CanonicalPath,
-		}
-
-		switch item.Entry.Kind {
-		case savior.EntryKindDir:
-			fh.SetMode(os.ModeDir | 0755)
-			_, err := zw.CreateHeader(fh)
-			must(t, err)
-		case savior.EntryKindFile:
-			fh.SetMode(0644)
-			if shouldCompress {
-				fh.Method = zip.Deflate
-				numDeflate++
-			} else {
-				fh.Method = zip.Store
-				numStore++
-			}
-			shouldCompress = !shouldCompress
-			writer, err := zw.CreateHeader(fh)
-			must(t, err)
-
-			_, err = writer.Write(item.Data)
-			must(t, err)
-		case savior.EntryKindSymlink:
-			fh.SetMode(os.ModeSymlink | 0644)
-			writer, err := zw.CreateHeader(fh)
-			must(t, err)
-
-			_, err = writer.Write([]byte(item.Linkname))
-			must(t, err)
-		}
-	}
-
-	err := zw.Close()
-	must(t, err)
-
-	log.Printf("Made zip with %d deflate files, %d store files", numDeflate, numStore)
-
-	return buf.Bytes()
 }
