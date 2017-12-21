@@ -29,7 +29,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 			c2, checkpointSize := roundtripEThroughGob(t, checkpoint)
 			totalCheckpointSize += int64(checkpointSize)
 			c = c2
-			log.Printf("↓ saved @ %.0f%% (%s checkpoint)", c.Progress*100, humanize.IBytes(uint64(checkpointSize)))
+			log.Printf("↓ saved @ %.0f%% (%s checkpoint, entry %d)", c.Progress*100, humanize.IBytes(uint64(checkpointSize)), c.EntryIndex)
 			return savior.AfterSaveStop, nil
 		}
 
