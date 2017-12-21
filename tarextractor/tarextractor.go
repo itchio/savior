@@ -8,14 +8,15 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/itchio/arkive/tar"
 	"github.com/itchio/savior"
+	"github.com/itchio/wharf/state"
 )
 
 type tarExtractor struct {
 	source savior.Source
 	sink   savior.Sink
 
-	SaveConsumer savior.SaveConsumer
-	pl           savior.ProgressListener
+	saveConsumer savior.SaveConsumer
+	consumer     *state.Consumer
 }
 
 type TarExtractorState struct {
@@ -29,17 +30,17 @@ func New(source savior.Source, sink savior.Sink) savior.Extractor {
 	return &tarExtractor{
 		source:       source,
 		sink:         sink,
-		SaveConsumer: savior.NopSaveConsumer(),
-		pl:           savior.NopProgressListener(),
+		saveConsumer: savior.NopSaveConsumer(),
+		consumer:     savior.NopConsumer(),
 	}
 }
 
-func (te *tarExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
-	te.SaveConsumer = sc
+func (te *tarExtractor) SetSaveConsumer(saveConsumer savior.SaveConsumer) {
+	te.saveConsumer = saveConsumer
 }
 
-func (te *tarExtractor) SetProgressListener(pl savior.ProgressListener) {
-	te.pl = pl
+func (te *tarExtractor) SetConsumer(consumer *state.Consumer) {
+	te.consumer = consumer
 }
 
 func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.ExtractorResult, error) {
@@ -49,6 +50,8 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	if checkpoint != nil {
 		if stateCheckpoint, ok := checkpoint.Data.(*TarExtractorState); ok {
 			if stateCheckpoint.Result != nil && stateCheckpoint.TarCheckpoint != nil {
+				te.consumer.Infof("↻ Resuming @ %.1f%%", checkpoint.Progress*100)
+
 				if checkpoint.SourceCheckpoint != nil {
 					savior.Debugf("tarextractor: resuming source from %d", checkpoint.SourceCheckpoint.Offset)
 				}
@@ -79,7 +82,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	}
 
 	if sr == nil {
-		savior.Debugf("tarextractor: starting fresh!")
+		te.consumer.Infof("→ Starting fresh extraction")
 
 		state = &TarExtractorState{
 			Result: &savior.ExtractorResult{
@@ -149,7 +152,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 			}
 			entry := checkpoint.Entry
 
-			// if we were resuming, it'd be here
+			te.consumer.Debugf("→ %s", entry)
 
 			switch entry.Kind {
 			case savior.EntryKindDir:
@@ -177,7 +180,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 					Src:   sr,
 					Entry: entry,
 
-					SaveConsumer: te.SaveConsumer,
+					SaveConsumer: te.saveConsumer,
 					MakeCheckpoint: func() (*savior.ExtractorCheckpoint, error) {
 						savior.Debugf("tarextractor: making checkpoint at entry %d", checkpoint.EntryIndex)
 						sourceCheckpoint, err := te.source.Save()
@@ -204,7 +207,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 					},
 
 					EmitProgress: func() {
-						te.pl(te.source.Progress())
+						te.consumer.Progress(te.source.Progress())
 					},
 				})
 				if err != nil {
@@ -218,7 +221,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 				}
 
 				state.Result.Entries = append(state.Result.Entries, entry)
-				te.pl(te.source.Progress())
+				te.consumer.Progress(te.source.Progress())
 			}
 
 			checkpoint.Entry = nil

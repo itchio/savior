@@ -1,8 +1,11 @@
 package savior
 
 import (
+	"fmt"
 	"io"
 	"os"
+
+	humanize "github.com/dustin/go-humanize"
 )
 
 type EntryKind int
@@ -15,6 +18,19 @@ const (
 	// EntryKindFile is the kind for a file
 	EntryKindFile = 2
 )
+
+func (ek EntryKind) String() string {
+	switch ek {
+	case EntryKindDir:
+		return "dir"
+	case EntryKindSymlink:
+		return "symlink"
+	case EntryKindFile:
+		return "file"
+	default:
+		return "<unknown entry kind>"
+	}
+}
 
 // An Entry is a struct that should have *just the right fields*
 // to be useful in an extractor checkpoint. They represent a file,
@@ -43,6 +59,10 @@ type Entry struct {
 	// Linkname describes the target of a symlink if the entry is a symlink
 	// and the format we're extracting has symlinks in metadata rather than its contents
 	Linkname string
+}
+
+func (entry *Entry) String() string {
+	return fmt.Sprintf("%s (%s %s)", entry.CanonicalPath, humanize.IBytes(uint64(entry.UncompressedSize)), entry.Kind)
 }
 
 // An EntryWriter is an io.WriteCloser that you can Sync().

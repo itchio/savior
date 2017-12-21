@@ -3,17 +3,20 @@ package checker
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"log"
+	"os"
 	"testing"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
+	"github.com/itchio/wharf/state"
 )
 
 type MakeExtractorFunc func() savior.Extractor
 type ShouldSaveFunc func() bool
+
+var showSaviorConsumerOutput = os.Getenv("SAVIOR_CONSUMER") == "1"
 
 func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave ShouldSaveFunc) {
 	var c *savior.ExtractorCheckpoint
@@ -35,13 +38,23 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 	var numProgressCalls int64
 	var numJumpbacks int64
 	var lastProgress float64
-	pl := func(progress float64) {
-		if progress < lastProgress {
-			numJumpbacks++
-			log.Printf("mh, progress jumped back from %.2f to %.2f", lastProgress*100, progress*100)
+	consumer := &state.Consumer{
+		OnProgress: func(progress float64) {
+			if progress < lastProgress {
+				numJumpbacks++
+				log.Printf("mh, progress jumped back from %.2f to %.2f", lastProgress*100, progress*100)
+			}
+			lastProgress = progress
+			numProgressCalls++
+		},
+	}
+
+	if showSaviorConsumerOutput {
+		consumer.OnMessage = func(lvl string, message string) {
+			if lvl != "debug" {
+				log.Printf("[%s] %s", lvl, message)
+			}
 		}
-		lastProgress = progress
-		numProgressCalls++
 	}
 
 	startTime := time.Now()
@@ -56,7 +69,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 
 		ex := makeExtractor()
 		ex.SetSaveConsumer(sc)
-		ex.SetProgressListener(pl)
+		ex.SetConsumer(consumer)
 
 		if c == nil {
 			savior.Debugf("→ first resume")
@@ -74,9 +87,8 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 
 		// yay, we did it!
 		totalDuration := time.Since(startTime)
-		pretty, totalBytes := resultStats(res)
-		perSec := humanize.IBytes(uint64(float64(totalBytes) / totalDuration.Seconds()))
-		log.Printf(" ⇒ extracted %s @ %s/s (%s total)", pretty, perSec, totalDuration)
+		perSec := humanize.IBytes(uint64(float64(res.Size()) / totalDuration.Seconds()))
+		log.Printf(" ⇒ extracted %s @ %s/s (%s total)", res.Stats(), perSec, totalDuration)
 		if numResumes > 0 {
 			meanCheckpointSize := float64(totalCheckpointSize) / float64(numResumes)
 			log.Printf(" ⇒ %d resumes, %s avg checkpoint", numResumes, humanize.IBytes(uint64(meanCheckpointSize)))
@@ -88,25 +100,6 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, shouldSave 
 
 		break
 	}
-}
-
-func resultStats(res *savior.ExtractorResult) (string, int64) {
-	var numFiles, numDirs, numSymlinks int
-	var totalBytes int64
-	for _, entry := range res.Entries {
-		switch entry.Kind {
-		case savior.EntryKindFile:
-			numFiles++
-		case savior.EntryKindDir:
-			numDirs++
-		case savior.EntryKindSymlink:
-			numSymlinks++
-		}
-		totalBytes += entry.UncompressedSize
-	}
-
-	pretty := fmt.Sprintf("%s (in %d files, %d dirs, %d symlinks)", humanize.IBytes(uint64(totalBytes)), numFiles, numDirs, numSymlinks)
-	return pretty, totalBytes
 }
 
 func roundtripEThroughGob(t *testing.T, c *savior.ExtractorCheckpoint) (*savior.ExtractorCheckpoint, int) {

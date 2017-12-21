@@ -4,6 +4,9 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+
+	humanize "github.com/dustin/go-humanize"
+	"github.com/itchio/wharf/state"
 )
 
 var ErrDeviceFull = errors.New("device is full")
@@ -18,6 +21,33 @@ type ExtractorCheckpoint struct {
 
 type ExtractorResult struct {
 	Entries []*Entry
+}
+
+func (er *ExtractorResult) Stats() string {
+	var numFiles, numDirs, numSymlinks int
+	var totalBytes int64
+	for _, entry := range er.Entries {
+		switch entry.Kind {
+		case EntryKindFile:
+			numFiles++
+		case EntryKindDir:
+			numDirs++
+		case EntryKindSymlink:
+			numSymlinks++
+		}
+		totalBytes += entry.UncompressedSize
+	}
+
+	return fmt.Sprintf("%s (in %d files, %d dirs, %d symlinks)", humanize.IBytes(uint64(totalBytes)), numFiles, numDirs, numSymlinks)
+}
+
+func (er *ExtractorResult) Size() int64 {
+	var totalBytes int64
+	for _, entry := range er.Entries {
+		totalBytes += entry.UncompressedSize
+	}
+
+	return totalBytes
 }
 
 type ExtractorFeatures struct {
@@ -78,17 +108,19 @@ type SaveConsumer interface {
 	Save(checkpoint *ExtractorCheckpoint) (AfterSaveAction, error)
 }
 
-type ProgressListener func(progress float64)
-
-func NopProgressListener() ProgressListener {
-	return func(progress float64) {
-		// muffin
+func NopConsumer() *state.Consumer {
+	return &state.Consumer{
+		OnMessage:        func(lvl string, msg string) {},
+		OnProgressLabel:  func(label string) {},
+		OnPauseProgress:  func() {},
+		OnResumeProgress: func() {},
+		OnProgress:       func(progress float64) {},
 	}
 }
 
 type Extractor interface {
 	SetSaveConsumer(saveConsumer SaveConsumer)
-	SetProgressListener(progressListener ProgressListener)
+	SetConsumer(consumer *state.Consumer)
 	Resume(checkpoint *ExtractorCheckpoint) (*ExtractorResult, error)
 	Features() ExtractorFeatures
 }

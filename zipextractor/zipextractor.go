@@ -5,10 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior/flatesource"
 	"github.com/itchio/savior/seeksource"
+	"github.com/itchio/wharf/state"
 
 	"github.com/go-errors/errors"
 	"github.com/itchio/arkive/zip"
@@ -24,8 +26,8 @@ type ZipExtractor struct {
 	reader     io.ReaderAt
 	readerSize int64
 
-	SaveConsumer savior.SaveConsumer
-	pl           savior.ProgressListener
+	saveConsumer savior.SaveConsumer
+	consumer     *state.Consumer
 
 	flateThreshold int64
 }
@@ -34,20 +36,21 @@ var _ savior.Extractor = (*ZipExtractor)(nil)
 
 func New(reader io.ReaderAt, readerSize int64, sink savior.Sink) *ZipExtractor {
 	return &ZipExtractor{
-		reader:       reader,
-		readerSize:   readerSize,
-		sink:         sink,
-		SaveConsumer: savior.NopSaveConsumer(),
-		pl:           savior.NopProgressListener(),
+		reader:     reader,
+		readerSize: readerSize,
+		sink:       sink,
+
+		saveConsumer: savior.NopSaveConsumer(),
+		consumer:     savior.NopConsumer(),
 	}
 }
 
-func (ze *ZipExtractor) SetSaveConsumer(sc savior.SaveConsumer) {
-	ze.SaveConsumer = sc
+func (ze *ZipExtractor) SetSaveConsumer(saveConsumer savior.SaveConsumer) {
+	ze.saveConsumer = saveConsumer
 }
 
-func (ze *ZipExtractor) SetProgressListener(pl savior.ProgressListener) {
-	ze.pl = pl
+func (ze *ZipExtractor) SetConsumer(consumer *state.Consumer) {
+	ze.consumer = consumer
 }
 
 func (ze *ZipExtractor) SetFlateThreshold(flateThreshold int64) {
@@ -68,9 +71,12 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	}
 
 	if checkpoint == nil {
+		ze.consumer.Infof("→ Starting fresh extraction")
 		checkpoint = &savior.ExtractorCheckpoint{
 			EntryIndex: 0,
 		}
+	} else {
+		ze.consumer.Infof("↻ Resuming @ %.1f%%", checkpoint.Progress*100)
 	}
 
 	stop := false
@@ -85,6 +91,20 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 			doneBytes += size
 		}
 	}
+
+	ze.consumer.Infof("⇓ Pre-allocating %s on disk", humanize.IBytes(uint64(totalBytes)))
+	preallocateStart := time.Now()
+	for _, zf := range zr.File {
+		entry := zipFileEntry(zf)
+		if entry.Kind == savior.EntryKindFile {
+			err = ze.sink.Preallocate(entry)
+			if err != nil {
+				return nil, errors.Wrap(err, 0)
+			}
+		}
+	}
+	preallocateDuration := time.Since(preallocateStart)
+	ze.consumer.Infof("⇒ Pre-allocated in %s, nothing can stop us now", preallocateDuration)
 
 	for entryIndex := checkpoint.EntryIndex; entryIndex < numEntries; entryIndex++ {
 		if stop {
@@ -101,6 +121,8 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 				checkpoint.Entry = zipFileEntry(zf)
 			}
 			entry := checkpoint.Entry
+
+			ze.consumer.Debugf("→ %s", entry)
 
 			switch entry.Kind {
 			case savior.EntryKindDir:
@@ -203,7 +225,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 						Dst:   writer,
 						Entry: entry,
 
-						SaveConsumer: ze.SaveConsumer,
+						SaveConsumer: ze.saveConsumer,
 						MakeCheckpoint: func() (*savior.ExtractorCheckpoint, error) {
 							sourceCheckpoint, err := src.Save()
 							if err != nil {
@@ -227,14 +249,14 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 						},
 
 						EmitProgress: func() {
-							ze.pl(computeProgress())
+							ze.consumer.Progress(computeProgress())
 						},
 					})
 					if err != nil {
 						return errors.Wrap(err, 0)
 					}
 
-					ze.pl(computeProgress())
+					ze.consumer.Progress(computeProgress())
 
 					if copyRes.Action == savior.AfterSaveStop {
 						stop = true
@@ -258,6 +280,8 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 	for _, zf := range zr.File {
 		res.Entries = append(res.Entries, zipFileEntry(zf))
 	}
+
+	ze.consumer.Statf("Extracted %s", res.Stats())
 
 	return res, nil
 }
