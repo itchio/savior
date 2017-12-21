@@ -70,7 +70,10 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 		return nil, errors.Wrap(err, 0)
 	}
 
+	isFresh := false
+
 	if checkpoint == nil {
+		isFresh = true
 		ze.consumer.Infof("→ Starting fresh extraction")
 		checkpoint = &savior.ExtractorCheckpoint{
 			EntryIndex: 0,
@@ -92,19 +95,21 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint) (*savior.
 		}
 	}
 
-	ze.consumer.Infof("⇓ Pre-allocating %s on disk", humanize.IBytes(uint64(totalBytes)))
-	preallocateStart := time.Now()
-	for _, zf := range zr.File {
-		entry := zipFileEntry(zf)
-		if entry.Kind == savior.EntryKindFile {
-			err = ze.sink.Preallocate(entry)
-			if err != nil {
-				return nil, errors.Wrap(err, 0)
+	if isFresh {
+		ze.consumer.Infof("⇓ Pre-allocating %s on disk", humanize.IBytes(uint64(totalBytes)))
+		preallocateStart := time.Now()
+		for _, zf := range zr.File {
+			entry := zipFileEntry(zf)
+			if entry.Kind == savior.EntryKindFile {
+				err = ze.sink.Preallocate(entry)
+				if err != nil {
+					return nil, errors.Wrap(err, 0)
+				}
 			}
 		}
+		preallocateDuration := time.Since(preallocateStart)
+		ze.consumer.Infof("⇒ Pre-allocated in %s, nothing can stop us now", preallocateDuration)
 	}
-	preallocateDuration := time.Since(preallocateStart)
-	ze.consumer.Infof("⇒ Pre-allocated in %s, nothing can stop us now", preallocateDuration)
 
 	for entryIndex := checkpoint.EntryIndex; entryIndex < numEntries; entryIndex++ {
 		if stop {
