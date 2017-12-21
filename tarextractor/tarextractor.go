@@ -104,7 +104,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 	}
 
 	stop := false
-	var stopErr error
+	var stopError error
 	entryIndex := checkpoint.EntryIndex
 	for !stop {
 		err := func() error {
@@ -207,7 +207,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 
 				if copyRes.Action == savior.AfterSaveStop {
 					stop = true
-					stopErr = savior.StopErr
+					stopError = savior.ErrStop
 					return nil
 				}
 
@@ -226,8 +226,8 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 		}
 	}
 
-	if stopErr != nil {
-		return nil, stopErr
+	if stopError != nil {
+		return nil, stopError
 	}
 
 	te.consumer.Statf("Extracted %s", state.Result.Stats())

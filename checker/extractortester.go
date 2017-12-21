@@ -81,7 +81,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 		}
 		res, err := ex.Resume(c, sink)
 		if err != nil {
-			if err == savior.StopErr {
+			if err == savior.ErrStop {
 				numResumes++
 				continue
 			}

@@ -279,7 +279,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 	}
 
 	if stop {
-		return nil, savior.StopErr
+		return nil, savior.ErrStop
 	}
 
 	res := &savior.ExtractorResult{}

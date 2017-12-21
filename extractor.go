@@ -2,14 +2,11 @@ package savior
 
 import (
 	"encoding/gob"
-	"errors"
 	"fmt"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/wharf/state"
 )
-
-var ErrDeviceFull = errors.New("device is full")
 
 type ExtractorCheckpoint struct {
 	SourceCheckpoint *SourceCheckpoint
