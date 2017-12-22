@@ -46,7 +46,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 		OnProgress: func(progress float64) {
 			if progress < lastProgress {
 				numJumpbacks++
-				log.Printf("mh, progress jumped back from %.2f to %.2f", lastProgress*100, progress*100)
+				log.Printf("mh, progress jumped back from %f to %f", lastProgress, progress)
 			}
 			lastProgress = progress
 			numProgressCalls++
