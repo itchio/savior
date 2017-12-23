@@ -24,6 +24,8 @@ var onWindows = runtime.GOOS == "windows"
 
 type FolderSink struct {
 	Directory string
+
+	writer *entryWriter
 }
 
 var _ Sink = (*FolderSink)(nil)
@@ -112,7 +114,19 @@ func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
 		}
 	}
 
-	return f, nil
+	err = fs.closeAllWriters()
+	if err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+
+	ew := &entryWriter{
+		fs:    fs,
+		f:     f,
+		entry: entry,
+	}
+	fs.writer = ew
+
+	return ew, nil
 }
 
 func (fs *FolderSink) Preallocate(entry *Entry) error {
@@ -170,7 +184,28 @@ func (fs *FolderSink) Symlink(entry *Entry, linkname string) error {
 	return nil
 }
 
+func (fs *FolderSink) Nuke() error {
+	err := fs.closeAllWriters()
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	// TODO: retry logic, a-la butler
+	return os.RemoveAll(fs.Directory)
+}
+
+func (fs *FolderSink) closeAllWriters() error {
+	if fs.writer != nil {
+		err := fs.writer.Close()
+		fs.writer = nil
+		return err
+	}
+
+	return nil
+}
+
 type entryWriter struct {
+	fs    *FolderSink
 	f     *os.File
 	entry *Entry
 }
