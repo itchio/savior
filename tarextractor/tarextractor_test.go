@@ -34,13 +34,13 @@ func TestTar(t *testing.T) {
 	log.Printf("Compressing with gzip...")
 	gzipBytes, err := checker.GzipCompress(tarBytes)
 	must(t, err)
-	gzipSource := gzipsource.New(seeksource.FromBytes(gzipBytes), 1*1024*1024)
+	gzipSource := gzipsource.New(seeksource.FromBytes(gzipBytes))
 	testTarVariants(t, ".tar.gz", int64(len(gzipBytes)), gzipSource, sink)
 
 	log.Printf("Compressing with bzip2...")
 	bzip2Bytes, err := checker.Bzip2Compress(tarBytes)
 	must(t, err)
-	bzip2Source := bzip2source.New(seeksource.FromBytes(bzip2Bytes), 1*1024*1024)
+	bzip2Source := bzip2source.New(seeksource.FromBytes(bzip2Bytes))
 	testTarVariants(t, ".tar.bz2", int64(len(bzip2Bytes)), bzip2Source, sink)
 }
 

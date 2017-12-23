@@ -21,7 +21,7 @@ func TestBzip2Source(t *testing.T) {
 	log.Printf("  compressed size: %s", humanize.IBytes(uint64(len(compressed))))
 
 	source := seeksource.FromBytes(compressed)
-	bs := bzip2source.New(source, 256*1024 /* 128 KiB threshold */)
+	bs := bzip2source.New(source)
 
 	checker.RunSourceTest(t, bs, reference)
 }
