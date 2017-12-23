@@ -227,7 +227,7 @@ func (ew *entryWriter) Close() error {
 	// if we're writing to a file that used to be larger
 	// we might need to truncate
 	stats, err := ew.f.Stat()
-	if err != nil {
+	if err == nil {
 		if stats.Size() != ew.entry.WriteOffset {
 			err = ew.f.Truncate(ew.entry.WriteOffset)
 			if err != nil {
