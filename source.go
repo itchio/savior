@@ -57,9 +57,9 @@ type Source interface {
 }
 
 type SourceSaveConsumer interface {
-	// Send a checkpoint to the consumer. The consumer
-	// must encode/save it immediately, and cannot retain it
-	// as its contents may change afterwards
+	// Send a checkpoint to the consumer. The consumer may
+	// retain the checkpoint, so its contents must not change
+	// after it is sent.
 	Save(checkpoint *SourceCheckpoint) error
 }
 
@@ -83,6 +83,7 @@ func DiscardByRead(source Source, delta int64) error {
 		if toRead > int64(len(buf)) {
 			toRead = int64(len(buf))
 		}
+
 		n, err := source.Read(buf[:toRead])
 		if err != nil {
 			return errors.Wrap(err, 0)
@@ -90,6 +91,7 @@ func DiscardByRead(source Source, delta int64) error {
 
 		delta -= int64(n)
 	}
+
 	return nil
 }
 

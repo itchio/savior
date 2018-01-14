@@ -74,10 +74,9 @@ func Bzip2Compress(input []byte) ([]byte, error) {
 func BrotliCompress(input []byte, level int) ([]byte, error) {
 	compressedBuf := new(bytes.Buffer)
 
-	params := enc.NewBrotliParams()
-	params.SetQuality(level)
-
-	w := enc.NewBrotliWriter(params, compressedBuf)
+	w := enc.NewBrotliWriter(compressedBuf, &enc.BrotliWriterOptions{
+		Quality: level,
+	})
 
 	_, err := w.Write(input)
 	if err != nil {

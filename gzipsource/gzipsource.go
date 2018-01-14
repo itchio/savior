@@ -8,7 +8,6 @@ import (
 	"github.com/itchio/kompress/flate"
 	"github.com/itchio/kompress/gzip"
 	"github.com/itchio/savior"
-	"github.com/mohae/deepcopy"
 )
 
 type gzipSource struct {
@@ -46,8 +45,7 @@ func (gs *gzipSource) SetSourceSaveConsumer(ssc savior.SourceSaveConsumer) {
 	gs.ssc = ssc
 	gs.source.SetSourceSaveConsumer(&savior.CallbackSourceSaveConsumer{
 		OnSave: func(checkpoint *savior.SourceCheckpoint) error {
-			// we need to deepcopy it because we're going to use it after return
-			gs.sourceCheckpoint = deepcopy.Copy(checkpoint).(*savior.SourceCheckpoint)
+			gs.sourceCheckpoint = checkpoint
 			gs.sr.WantSave()
 			return nil
 		},

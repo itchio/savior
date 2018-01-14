@@ -7,7 +7,6 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/itchio/kompress/flate"
 	"github.com/itchio/savior"
-	"github.com/mohae/deepcopy"
 )
 
 type flateSource struct {
@@ -42,8 +41,7 @@ func (fs *flateSource) SetSourceSaveConsumer(ssc savior.SourceSaveConsumer) {
 	fs.ssc = ssc
 	fs.source.SetSourceSaveConsumer(&savior.CallbackSourceSaveConsumer{
 		OnSave: func(checkpoint *savior.SourceCheckpoint) error {
-			// we need to deepcopy it because we're going to use it after return
-			fs.sourceCheckpoint = deepcopy.Copy(checkpoint).(*savior.SourceCheckpoint)
+			fs.sourceCheckpoint = checkpoint
 			fs.sr.WantSave()
 			return nil
 		},

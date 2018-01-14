@@ -7,7 +7,6 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/itchio/dskompress/brotli"
 	"github.com/itchio/savior"
-	"github.com/mohae/deepcopy"
 )
 
 type brotliSource struct {
@@ -38,13 +37,12 @@ func New(source savior.Source) *brotliSource {
 }
 
 func (bs *brotliSource) SetSourceSaveConsumer(ssc savior.SourceSaveConsumer) {
-	savior.Debugf("brotli: set source save consumer!")
+	savior.Debugf("brotlisource: set source save consumer!")
 	bs.ssc = ssc
 	bs.source.SetSourceSaveConsumer(&savior.CallbackSourceSaveConsumer{
 		OnSave: func(checkpoint *savior.SourceCheckpoint) error {
-			savior.Debugf("brotli: on save!")
-			// we need to deepcopy it because we're going to use it after return
-			bs.sourceCheckpoint = deepcopy.Copy(checkpoint).(*savior.SourceCheckpoint)
+			savior.Debugf("brotlisource: underlying source gave us checkpoint!")
+			bs.sourceCheckpoint = checkpoint
 			bs.br.WantSave()
 			return nil
 		},
@@ -52,12 +50,12 @@ func (bs *brotliSource) SetSourceSaveConsumer(ssc savior.SourceSaveConsumer) {
 }
 
 func (bs *brotliSource) WantSave() {
-	savior.Debugf("brotli: want save!")
+	savior.Debugf("brotlisource: want save!")
 	bs.source.WantSave()
 }
 
 func (bs *brotliSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, error) {
-	savior.Debugf(`brotli: asked to resume`)
+	savior.Debugf(`brotlisource: asked to resume`)
 
 	if checkpoint != nil {
 		if ourCheckpoint, ok := checkpoint.Data.(*BrotliSourceCheckpoint); ok {
