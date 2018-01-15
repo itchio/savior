@@ -58,6 +58,22 @@ type Source interface {
 	io.ByteReader
 }
 
+// SeekSource is a Source with extra powers: you can know its size,
+// tell which offset it's currently at, and ask for a view of a subsection of it.
+type SeekSource interface {
+	Source
+
+	// Tell returns the current offset of the seeksource
+	Tell() int64
+	// Size returns the total number of bytes the seeksource reads
+	Size() int64
+	// Section returns a SeekSource that reads from start to start+size
+	// Note that the returned SeekSource will use the same underlying
+	// io.ReadSeeker, so the original SeekSource cannot be used anymore.
+	// The returned SeekSource should be Resume()'d before being used
+	Section(start int64, size int64) (SeekSource, error)
+}
+
 type SourceSaveConsumer interface {
 	// Send a checkpoint to the consumer. The consumer may
 	// retain the checkpoint, so its contents must not change

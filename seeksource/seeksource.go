@@ -24,22 +24,9 @@ type seekSource struct {
 	size         int64
 }
 
-type SeekSource interface {
-	savior.Source
-	// Tell returns the current offset of the seeksource
-	Tell() int64
-	// Size returns the total number of bytes the seeksource reads
-	Size() int64
-	// Section returns a SeekSource that reads from start to start+size
-	// Note that the returned SeekSource will use the same underlying
-	// io.ReadSeeker, so the original SeekSource cannot be used anymore.
-	// The returned SeekSource should be Resume()'d before being used
-	Section(start int64, size int64) (SeekSource, error)
-}
+var _ savior.SeekSource = (*seekSource)(nil)
 
-var _ SeekSource = (*seekSource)(nil)
-
-func FromFile(file eos.File) SeekSource {
+func FromFile(file eos.File) savior.SeekSource {
 	res := &seekSource{
 		rs: file,
 	}
@@ -52,13 +39,13 @@ func FromFile(file eos.File) SeekSource {
 	return res
 }
 
-func FromBytes(buf []byte) SeekSource {
+func FromBytes(buf []byte) savior.SeekSource {
 	return NewWithSize(bytes.NewReader(buf), int64(len(buf)))
 }
 
 // NewWithSize returns a new source that reads up to 'size' bytes
 // from an io.ReadSeeker. If size is zero, the SeekSource will immediately EOF.
-func NewWithSize(rs io.ReadSeeker, size int64) SeekSource {
+func NewWithSize(rs io.ReadSeeker, size int64) savior.SeekSource {
 	return &seekSource{
 		rs:   rs,
 		size: size,
@@ -107,7 +94,7 @@ func (ss *seekSource) Size() int64 {
 	return ss.size
 }
 
-func (ss *seekSource) Section(start int64, size int64) (SeekSource, error) {
+func (ss *seekSource) Section(start int64, size int64) (savior.SeekSource, error) {
 	if start < 0 {
 		return nil, errors.Wrap(fmt.Errorf("can't make section with negative start"), 0)
 	}
