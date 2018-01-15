@@ -114,6 +114,10 @@ func (bs *bzip2Source) Resume(checkpoint *savior.SourceCheckpoint) (int64, error
 }
 
 func (bs *bzip2Source) Read(buf []byte) (int, error) {
+	if bs.sr == nil {
+		return 0, errors.Wrap(savior.ErrUninitializedSource, 0)
+	}
+
 	n, err := bs.sr.Read(buf)
 	bs.offset += int64(n)
 
@@ -150,6 +154,10 @@ func (bs *bzip2Source) Read(buf []byte) (int, error) {
 }
 
 func (bs *bzip2Source) ReadByte() (byte, error) {
+	if bs.sr == nil {
+		return 0, errors.Wrap(savior.ErrUninitializedSource, 0)
+	}
+
 	_, err := bs.Read(bs.bytebuf)
 	return bs.bytebuf[0], err
 }

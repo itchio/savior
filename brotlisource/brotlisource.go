@@ -116,6 +116,10 @@ func (bs *brotliSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, erro
 }
 
 func (bs *brotliSource) Read(buf []byte) (int, error) {
+	if bs.br == nil {
+		return 0, errors.Wrap(savior.ErrUninitializedSource, 0)
+	}
+
 	n, err := bs.br.Read(buf)
 	bs.offset += int64(n)
 
@@ -152,6 +156,10 @@ func (bs *brotliSource) Read(buf []byte) (int, error) {
 }
 
 func (bs *brotliSource) ReadByte() (byte, error) {
+	if bs.br == nil {
+		return 0, errors.Wrap(savior.ErrUninitializedSource, 0)
+	}
+
 	_, err := bs.Read(bs.bytebuf)
 	return bs.bytebuf[0], err
 }

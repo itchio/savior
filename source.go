@@ -19,6 +19,8 @@ type SourceCheckpoint struct {
 	Data interface{}
 }
 
+var ErrUninitializedSource = errors.New("tried to read from source before Resume() was called")
+
 // A Source represents a data stream that does not provide random access,
 // is not seekable, but for which checkpoints can be emitted, allowing
 // the consumer to resume reading from the stream later.

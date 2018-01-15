@@ -115,6 +115,10 @@ func (gs *gzipSource) Resume(checkpoint *savior.SourceCheckpoint) (int64, error)
 }
 
 func (gs *gzipSource) Read(buf []byte) (int, error) {
+	if gs.sr == nil {
+		return 0, errors.Wrap(savior.ErrUninitializedSource, 0)
+	}
+
 	n, err := gs.sr.Read(buf)
 	gs.offset += int64(n)
 
@@ -152,6 +156,10 @@ func (gs *gzipSource) Read(buf []byte) (int, error) {
 }
 
 func (gs *gzipSource) ReadByte() (byte, error) {
+	if gs.sr == nil {
+		return 0, errors.Wrap(savior.ErrUninitializedSource, 0)
+	}
+
 	_, err := gs.Read(gs.bytebuf)
 	return gs.bytebuf[0], err
 }

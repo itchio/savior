@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/go-errors/errors"
+	"github.com/itchio/savior"
 	"github.com/itchio/savior/brotlisource"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/fullyrandom"
@@ -14,6 +16,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_Uninitialized(t *testing.T) {
+	{
+		ss := seeksource.FromBytes(nil)
+		_, err := ss.Resume(nil)
+		assert.NoError(t, err)
+
+		bs := brotlisource.New(ss)
+		_, err = bs.Read([]byte{})
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+
+		_, err = bs.ReadByte()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+	}
+}
+
 type sample struct {
 	name string
 	data []byte
@@ -21,7 +40,7 @@ type sample struct {
 
 const dataSize = 16 * 1024 * 1024
 
-func Test_BrotliSource(t *testing.T) {
+func Test_Checkpoints(t *testing.T) {
 	samples := []sample{
 		sample{
 			name: "zero",

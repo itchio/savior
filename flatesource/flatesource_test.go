@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/go-errors/errors"
+	"github.com/itchio/savior"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/flatesource"
 	"github.com/itchio/savior/seeksource"
@@ -12,7 +14,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFlateSource(t *testing.T) {
+func Test_Uninitialized(t *testing.T) {
+	{
+		ss := seeksource.FromBytes(nil)
+		_, err := ss.Resume(nil)
+		assert.NoError(t, err)
+
+		fs := flatesource.New(ss)
+		_, err = fs.Read([]byte{})
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+
+		_, err = fs.ReadByte()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+	}
+}
+
+func Test_Checkpoints(t *testing.T) {
 	reference := semirandom.Bytes(4 * 1024 * 1024 /* 4 MiB of random data */)
 	compressed, err := checker.FlateCompress(reference)
 	assert.NoError(t, err)
