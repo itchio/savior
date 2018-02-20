@@ -220,6 +220,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 					if err != nil {
 						return errors.Wrap(err, 0)
 					}
+					defer writer.Close()
 
 					computeProgress := func() float64 {
 						actualDoneBytes := doneBytes + entry.WriteOffset
