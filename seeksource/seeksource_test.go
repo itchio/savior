@@ -9,9 +9,9 @@ import (
 
 	"github.com/itchio/savior"
 
-	"github.com/go-errors/errors"
 	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/savior/semirandom"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,12 +19,12 @@ func Test_Uninitialized(t *testing.T) {
 	{
 		_, err := seeksource.FromBytes(nil).Read([]byte{})
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+		assert.True(t, errors.Cause(err) == savior.ErrUninitializedSource)
 	}
 	{
 		_, err := seeksource.FromBytes(nil).ReadByte()
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+		assert.True(t, errors.Cause(err) == savior.ErrUninitializedSource)
 	}
 }
 
@@ -297,9 +297,6 @@ func Test_InvalidCheckpoint(t *testing.T) {
 
 func must(t *testing.T, err error) {
 	if err != nil {
-		if se, ok := err.(*errors.Error); ok {
-			t.Logf("Full error stack: %s", se.ErrorStack())
-		}
 		assert.NoError(t, err)
 		t.FailNow()
 	}

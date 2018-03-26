@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/go-errors/errors"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/flatesource"
 	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/savior/semirandom"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,11 +23,11 @@ func Test_Uninitialized(t *testing.T) {
 		fs := flatesource.New(ss)
 		_, err = fs.Read([]byte{})
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+		assert.True(t, errors.Cause(err) == savior.ErrUninitializedSource)
 
 		_, err = fs.ReadByte()
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+		assert.True(t, errors.Cause(err) == savior.ErrUninitializedSource)
 	}
 }
 

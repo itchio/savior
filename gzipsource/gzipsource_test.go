@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/go-errors/errors"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/gzipsource"
 	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/savior/semirandom"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,11 +23,11 @@ func Test_Uninitialized(t *testing.T) {
 		gs := gzipsource.New(ss)
 		_, err = gs.Read([]byte{})
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+		assert.True(t, errors.Cause(err) == savior.ErrUninitializedSource)
 
 		_, err = gs.ReadByte()
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, savior.ErrUninitializedSource))
+		assert.True(t, errors.Cause(err) == savior.ErrUninitializedSource)
 	}
 }
 
