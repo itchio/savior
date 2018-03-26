@@ -1,5 +1,6 @@
 # savior
 
+![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)
 [![Build Status](https://travis-ci.org/itchio/savior.svg?branch=master)](https://travis-ci.org/itchio/savior)
 
 savior is an optimistic attempt at providing an abstract layer over
