@@ -94,6 +94,9 @@ Extractors can use sources internally, for example:
 Note: `tarextractor` and `zipextractor` are implemented on top of forks of golang's
 zip and tar archive handlers, which can be found at [itchio/arkive](https://github.com/itchio/arkive).
 
+Note: extractors are not responsible for closing sinks - the sinks are created and closed
+by the caller itself.
+
 ### Sinks
 
 A `Sink` is typically what an extractor extracts "to". In the simplest case, it's a
