@@ -6,8 +6,8 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior/bzip2source"
+	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/gzipsource"
-	"github.com/itchio/savior/internal/checker"
 
 	"github.com/itchio/savior"
 	"github.com/stretchr/testify/assert"

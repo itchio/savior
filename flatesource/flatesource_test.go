@@ -6,8 +6,8 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
+	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/flatesource"
-	"github.com/itchio/savior/internal/checker"
 	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/savior/semirandom"
 	"github.com/pkg/errors"
