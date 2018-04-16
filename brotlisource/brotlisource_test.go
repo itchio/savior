@@ -8,8 +8,8 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/brotlisource"
-	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/fullyrandom"
+	"github.com/itchio/savior/internal/checker"
 	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/savior/semirandom"
 	"github.com/pkg/errors"
@@ -42,15 +42,15 @@ const dataSize = 16 * 1024 * 1024
 
 func Test_Checkpoints(t *testing.T) {
 	samples := []sample{
-		sample{
+		{
 			name: "zero",
 			data: make([]byte, dataSize),
 		},
-		sample{
+		{
 			name: "semirandom",
 			data: semirandom.Bytes(dataSize),
 		},
-		sample{
+		{
 			name: "fullyrandom",
 			data: fullyrandom.Bytes(dataSize),
 		},

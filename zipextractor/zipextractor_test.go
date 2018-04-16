@@ -7,7 +7,7 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/itchio/savior"
-	"github.com/itchio/savior/checker"
+	"github.com/itchio/savior/internal/checker"
 	"github.com/itchio/savior/zipextractor"
 	"github.com/stretchr/testify/assert"
 )

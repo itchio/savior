@@ -237,7 +237,7 @@ func Test_Section(t *testing.T) {
 		for {
 			_, err = io.CopyN(buf, ss2, 39)
 			if err == io.EOF {
-				return
+				break
 			}
 			must(t, err)
 
