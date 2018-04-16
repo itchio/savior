@@ -2,6 +2,8 @@
 
 ![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)
 [![Build Status](https://travis-ci.org/itchio/savior.svg?branch=master)](https://travis-ci.org/itchio/savior)
+[![codecov](https://codecov.io/gh/itchio/savior/branch/master/graph/badge.svg)](https://codecov.io/gh/itchio/savior)
+[![Go Report Card](https://goreportcard.com/badge/github.com/itchio/savior)](https://goreportcard.com/report/github.com/itchio/savior)
 
 savior is an optimistic attempt at providing an abstract layer over
 various compression formats (like deflate, gzip, bzip2) and archive formats (like zip, tar, etc.)
