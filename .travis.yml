@@ -7,7 +7,7 @@ before_install:
   - go get -d -t -v ./...
 
 script:
-  - go test -race -cover -coverprofile=coverage.txt
+  - go test -race -cover -coverprofile=coverage.txt ./...
 
 after_success:
   - curl -s https://codecov.io/bash | bash
