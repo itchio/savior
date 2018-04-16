@@ -25,7 +25,7 @@ For example, a source might be:
   * Another source being decompressed from FLATE, gzip, or bzip2
 
 savior ships with `seeksource`, which covers the former (in combination with
-[httpfile](https://godoc.org/github.com/itchio/httpkit/httpfile)), and
+[htfs](https://godoc.org/github.com/itchio/httpkit/htfs)), and
 `flatesource`, `gzipsource`, `bzip2source`, which cover the latter.
 
 A source's size doesn't need to be known in advance, although sources can optionally
