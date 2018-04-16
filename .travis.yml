@@ -10,4 +10,4 @@ script:
   - go test -race -cover -coverprofile=coverage.txt
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)>
+  - curl -s https://codecov.io/bash | bash
