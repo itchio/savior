@@ -8,6 +8,7 @@ import (
 
 	"github.com/itchio/savior"
 	"github.com/itchio/wharf/eos"
+	"github.com/itchio/wharf/eos/option"
 	"github.com/pkg/errors"
 )
 
@@ -25,6 +26,30 @@ type seekSource struct {
 }
 
 var _ savior.SeekSource = (*seekSource)(nil)
+
+func OpenPaused(name string, opts ...option.Option) (savior.SeekSource, error) {
+	f, err := eos.Open(name, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	s := FromFile(f)
+	return s, nil
+}
+
+func Open(name string, opts ...option.Option) (savior.SeekSource, error) {
+	s, err := OpenPaused(name, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.Resume(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
 
 func FromFile(file eos.File) savior.SeekSource {
 	res := &seekSource{
