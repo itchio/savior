@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/itchio/httpkit/progress"
 	"github.com/itchio/savior/bzip2source"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/gzipsource"
@@ -49,17 +49,17 @@ func testTarVariants(t *testing.T, ext string, size int64, source savior.Source,
 		return tarextractor.New(source)
 	}
 
-	log.Printf("Testing .tar (%s), no resumes", humanize.IBytes(uint64(size)))
+	log.Printf("Testing .tar (%s), no resumes", progress.FormatBytes(size))
 	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		return false
 	})
 
-	log.Printf("Testing .tar (%s), all resumes", humanize.IBytes(uint64(size)))
+	log.Printf("Testing .tar (%s), all resumes", progress.FormatBytes(size))
 	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		return true
 	})
 
-	log.Printf("Testing .tar (%s), every other resume", humanize.IBytes(uint64(size)))
+	log.Printf("Testing .tar (%s), every other resume", progress.FormatBytes(size))
 	i := 0
 	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		i++

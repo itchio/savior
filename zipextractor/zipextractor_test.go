@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/itchio/httpkit/progress"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/zipextractor"
@@ -31,17 +31,17 @@ func TestZip(t *testing.T) {
 		return ex
 	}
 
-	log.Printf("Testing .zip (%s), no resumes", humanize.IBytes(uint64(len(zipBytes))))
+	log.Printf("Testing .zip (%s), no resumes", progress.FormatBytes(int64(len(zipBytes))))
 	checker.RunExtractorText(t, makeZipExtractor, sink, func() bool {
 		return false
 	})
 
-	log.Printf("Testing .zip (%s), every resume", humanize.IBytes(uint64(len(zipBytes))))
+	log.Printf("Testing .zip (%s), every resume", progress.FormatBytes(int64(len(zipBytes))))
 	checker.RunExtractorText(t, makeZipExtractor, sink, func() bool {
 		return true
 	})
 
-	log.Printf("Testing .zip (%s), every other resume", humanize.IBytes(uint64(len(zipBytes))))
+	log.Printf("Testing .zip (%s), every other resume", progress.FormatBytes(int64(len(zipBytes))))
 	i := 0
 	checker.RunExtractorText(t, makeZipExtractor, sink, func() bool {
 		i++

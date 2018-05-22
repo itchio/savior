@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/itchio/httpkit/progress"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/bzip2source"
 	"github.com/itchio/savior/checker"
@@ -35,8 +35,8 @@ func Test_Checkpoints(t *testing.T) {
 	compressed, err := checker.Bzip2Compress(reference)
 	assert.NoError(t, err)
 
-	log.Printf("uncompressed size: %s", humanize.IBytes(uint64(len(reference))))
-	log.Printf("  compressed size: %s", humanize.IBytes(uint64(len(compressed))))
+	log.Printf("uncompressed size: %s", progress.FormatBytes(int64(len(reference))))
+	log.Printf("  compressed size: %s", progress.FormatBytes(int64(len(compressed))))
 
 	source := seeksource.FromBytes(compressed)
 	bs := bzip2source.New(source)
