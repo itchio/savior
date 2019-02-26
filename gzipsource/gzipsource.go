@@ -185,6 +185,10 @@ func (gs *gzipSource) Progress() float64 {
 	return gs.source.Progress()
 }
 
+func (gs *gzipSource) Close() error {
+	return gs.sr.Close()
+}
+
 func init() {
 	gob.Register(&GzipSourceCheckpoint{})
 }
