@@ -248,7 +248,6 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 		}
 	}
 
-	te.consumer.Statf("Extracted %s", state.Result.Stats())
 	return state.Result, nil
 }
 

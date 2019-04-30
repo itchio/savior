@@ -303,8 +303,6 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 		res.Entries = append(res.Entries, zipFileEntry(zf))
 	}
 
-	ze.consumer.Statf("Extracted %s", res.Stats())
-
 	return res, nil
 }
 
