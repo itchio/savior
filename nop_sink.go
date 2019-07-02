@@ -3,7 +3,7 @@ package savior
 import (
 	"path/filepath"
 
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/state"
 )
 
 // NopSink does not write anything anywhere

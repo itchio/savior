@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/itchio/httpkit/progress"
+	"github.com/itchio/headway/united"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/gzipsource"
@@ -36,8 +36,8 @@ func Test_Checkpoints(t *testing.T) {
 	compressed, err := checker.GzipCompress(reference)
 	assert.NoError(t, err)
 
-	log.Printf("uncompressed size: %s", progress.FormatBytes(int64(len(reference))))
-	log.Printf("  compressed size: %s", progress.FormatBytes(int64(len(compressed))))
+	log.Printf("uncompressed size: %s", united.FormatBytes(int64(len(reference))))
+	log.Printf("  compressed size: %s", united.FormatBytes(int64(len(compressed))))
 
 	source := seeksource.FromBytes(compressed)
 	gs := gzipsource.New(source)

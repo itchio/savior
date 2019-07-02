@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/itchio/httpkit/progress"
+	"github.com/itchio/headway/united"
 )
 
 type EntryKind int
@@ -62,7 +62,7 @@ type Entry struct {
 }
 
 func (entry *Entry) String() string {
-	return fmt.Sprintf("%s (%s %s)", entry.CanonicalPath, progress.FormatBytes(entry.UncompressedSize), entry.Kind)
+	return fmt.Sprintf("%s (%s %s)", entry.CanonicalPath, united.FormatBytes(entry.UncompressedSize), entry.Kind)
 }
 
 // An EntryWriter is an io.WriteCloser that you can Sync().

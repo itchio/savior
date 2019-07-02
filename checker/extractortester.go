@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/itchio/httpkit/progress"
+	"github.com/itchio/headway/united"
 	"github.com/itchio/savior"
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/state"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +29,7 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 			c2, checkpointSize := roundtripEThroughGob(t, checkpoint)
 			totalCheckpointSize += int64(checkpointSize)
 			c = c2
-			log.Printf("↓ saved @ %.0f%% (%s checkpoint, entry %d)", c.Progress*100, progress.FormatBytes(checkpointSize), c.EntryIndex)
+			log.Printf("↓ saved @ %.0f%% (%s checkpoint, entry %d)", c.Progress*100, united.FormatBytes(checkpointSize), c.EntryIndex)
 			return savior.AfterSaveStop, nil
 		}
 
@@ -91,11 +91,11 @@ func RunExtractorText(t *testing.T, makeExtractor MakeExtractorFunc, sink *Sink,
 
 		// yay, we did it!
 		totalDuration := time.Since(startTime)
-		perSec := progress.FormatBPS(res.Size(), totalDuration)
+		perSec := united.FormatBPS(res.Size(), totalDuration)
 		log.Printf(" ⇒ extracted %s @ %s/s (%s total)", res.Stats(), perSec, totalDuration)
 		if numResumes > 0 {
 			meanCheckpointSize := float64(totalCheckpointSize) / float64(numResumes)
-			log.Printf(" ⇒ %d resumes, %s avg checkpoint", numResumes, progress.FormatBytes(int64(meanCheckpointSize)))
+			log.Printf(" ⇒ %d resumes, %s avg checkpoint", numResumes, united.FormatBytes(int64(meanCheckpointSize)))
 		} else {
 			log.Printf(" ⇒ no resumes")
 		}

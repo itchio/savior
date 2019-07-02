@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/itchio/savior"
-	"github.com/itchio/wharf/eos"
+	"github.com/itchio/headway/eos"
 	"github.com/pkg/errors"
 )
 

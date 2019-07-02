@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/itchio/httpkit/progress"
+	"github.com/itchio/headway/united"
 	"github.com/itchio/savior/bzip2source"
 	"github.com/itchio/savior/checker"
 	"github.com/itchio/savior/gzipsource"
@@ -49,17 +49,17 @@ func testTarVariants(t *testing.T, ext string, size int64, source savior.Source,
 		return tarextractor.New(source)
 	}
 
-	log.Printf("Testing .tar (%s), no resumes", progress.FormatBytes(size))
+	log.Printf("Testing .tar (%s), no resumes", united.FormatBytes(size))
 	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		return false
 	})
 
-	log.Printf("Testing .tar (%s), all resumes", progress.FormatBytes(size))
+	log.Printf("Testing .tar (%s), all resumes", united.FormatBytes(size))
 	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		return true
 	})
 
-	log.Printf("Testing .tar (%s), every other resume", progress.FormatBytes(size))
+	log.Printf("Testing .tar (%s), every other resume", united.FormatBytes(size))
 	i := 0
 	checker.RunExtractorText(t, makeExtractor, sink, func() bool {
 		i++

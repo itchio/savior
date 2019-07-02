@@ -7,7 +7,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/itchio/httpkit/progress"
+	"github.com/itchio/headway/united"
 	"github.com/itchio/savior"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -53,12 +53,12 @@ func RunSourceTest(t *testing.T, source savior.Source, reference []byte) {
 			c2, checkpointSize := roundtripThroughGob(t, c)
 
 			totalCheckpoints++
-			log.Printf("%s ↓ made %s checkpoint @ %.2f%% (byte %d)", progress.FormatBytes(c2.Offset), progress.FormatBytes(checkpointSize), source.Progress()*100, c2.Offset)
+			log.Printf("%s ↓ made %s checkpoint @ %.2f%% (byte %d)", united.FormatBytes(c2.Offset), united.FormatBytes(checkpointSize), source.Progress()*100, c2.Offset)
 
 			newOffset, err := source.Resume(c2)
 			must(t, err)
 
-			log.Printf("%s ↻ resumed", progress.FormatBytes(newOffset))
+			log.Printf("%s ↻ resumed", united.FormatBytes(newOffset))
 			_, err = output.Seek(newOffset, io.SeekStart)
 			must(t, err)
 

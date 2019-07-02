@@ -4,8 +4,8 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/itchio/httpkit/progress"
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/united"
+	"github.com/itchio/headway/state"
 )
 
 type ExtractorCheckpoint struct {
@@ -37,7 +37,7 @@ func (er *ExtractorResult) Stats() string {
 		totalBytes += entry.UncompressedSize
 	}
 
-	return fmt.Sprintf("%s (in %d files, %d dirs, %d symlinks)", progress.FormatBytes(totalBytes), numFiles, numDirs, numSymlinks)
+	return fmt.Sprintf("%s (in %d files, %d dirs, %d symlinks)", united.FormatBytes(totalBytes), numFiles, numDirs, numSymlinks)
 }
 
 // Returns the total size of all listed entries, in bytes

@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/itchio/arkive/tar"
-	"github.com/itchio/httpkit/progress"
 	"github.com/itchio/savior"
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/state"
+	"github.com/itchio/headway/united"
 	"github.com/pkg/errors"
 )
 
@@ -124,7 +124,7 @@ func (te *tarExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			savior.Debugf("tarextractor: at checkpoint, tar read offset is %s", progress.FormatBytes(tarCheckpoint.Roffset))
+			savior.Debugf("tarextractor: at checkpoint, tar read offset is %s", united.FormatBytes(tarCheckpoint.Roffset))
 
 			state.TarCheckpoint = tarCheckpoint
 

@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/itchio/wharf/wtest"
-
 	"github.com/itchio/savior"
 	"github.com/stretchr/testify/assert"
 )
@@ -51,4 +49,14 @@ func Test_FolderSink(t *testing.T) {
 
 	s := string(bs)
 	assert.EqualValues("fee", s)
+}
+
+// tmust shows a complete error stack and fails a test immediately
+// if err is non-nil
+func tmust(t *testing.T, err error) {
+	if err != nil {
+		t.Helper()
+		t.Errorf("%+v", err)
+		t.FailNow()
+	}
 }
