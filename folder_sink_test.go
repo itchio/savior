@@ -13,7 +13,7 @@ func Test_FolderSink(t *testing.T) {
 	assert := assert.New(t)
 
 	dir, err := ioutil.TempDir("", "foldersink-test")
-	wtest.Must(t, err)
+	tmust(t, err)
 
 	fs := &savior.FolderSink{
 		Directory: dir,
@@ -28,24 +28,24 @@ func Test_FolderSink(t *testing.T) {
 
 	{
 		w, err := fs.GetWriter(entry)
-		wtest.Must(t, err)
+		tmust(t, err)
 		_, err = w.Write([]byte("foobar"))
-		wtest.Must(t, err)
+		tmust(t, err)
 		err = w.Close()
-		wtest.Must(t, err)
+		tmust(t, err)
 	}
 	entry.WriteOffset = 1
 	{
 		w, err := fs.GetWriter(entry)
-		wtest.Must(t, err)
+		tmust(t, err)
 		_, err = w.Write([]byte("ee"))
-		wtest.Must(t, err)
+		tmust(t, err)
 		err = w.Close()
-		wtest.Must(t, err)
+		tmust(t, err)
 	}
 
 	bs, err := ioutil.ReadFile(filepath.Join(dir, "secret"))
-	wtest.Must(t, err)
+	tmust(t, err)
 
 	s := string(bs)
 	assert.EqualValues("fee", s)
