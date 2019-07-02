@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/itchio/headway/united"
+	"github.com/itchio/randsource/fullyrandom"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/brotlisource"
 	"github.com/itchio/savior/checker"
-	"github.com/itchio/savior/fullyrandom"
 	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/savior/semirandom"
 	"github.com/pkg/errors"
