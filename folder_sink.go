@@ -3,9 +3,9 @@ package savior
 import (
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/itchio/headway/state"
 	"github.com/pkg/errors"
@@ -33,19 +33,27 @@ type FolderSink struct {
 
 var _ Sink = (*FolderSink)(nil)
 
-func unkludgePath(s string) string {
-	// found this cute archive with path:
-	//    "blah/blah/Icon\r"
-	// so this is the workaround.
-	return strings.Trim(s, "\r\n")
+var ignoredNames = map[string]struct{}{
+	// the path for folder icons on macOS (yes, really).
+	// thanks to Jordan Rose for pointing it out, and
+	// no thanks to whoever thought of that.
+	"Icon\r": struct{}{},
+}
+
+func shouldIgnorePath(s string) bool {
+	_, ok := ignoredNames[path.Base(s)]
+	return ok
 }
 
 func (fs *FolderSink) destPath(entry *Entry) string {
-	dest := filepath.Join(fs.Directory, filepath.FromSlash(entry.CanonicalPath))
-	return unkludgePath(dest)
+	return filepath.Join(fs.Directory, filepath.FromSlash(entry.CanonicalPath))
 }
 
 func (fs *FolderSink) Mkdir(entry *Entry) error {
+	if shouldIgnorePath(entry.CanonicalPath) {
+		return nil
+	}
+
 	dstpath := fs.destPath(entry)
 
 	dirstat, err := os.Lstat(dstpath)
@@ -113,9 +121,17 @@ func (fs *FolderSink) createFile(entry *Entry) (*os.File, error) {
 }
 
 func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
+	if shouldIgnorePath(entry.CanonicalPath) {
+		return &nopEntryWriter{}, nil
+	}
+
 	f, err := fs.createFile(entry)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	if f == nil {
+		return nil, nil
 	}
 
 	if entry.WriteOffset > 0 {
@@ -146,6 +162,10 @@ func (fs *FolderSink) GetWriter(entry *Entry) (EntryWriter, error) {
 }
 
 func (fs *FolderSink) Preallocate(entry *Entry) error {
+	if shouldIgnorePath(entry.CanonicalPath) {
+		return nil
+	}
+
 	f, err := fs.createFile(entry)
 	if err != nil {
 		return errors.WithStack(err)
@@ -171,6 +191,10 @@ func (fs *FolderSink) Preallocate(entry *Entry) error {
 }
 
 func (fs *FolderSink) Symlink(entry *Entry, linkname string) error {
+	if shouldIgnorePath(entry.CanonicalPath) {
+		return nil
+	}
+
 	if onWindows {
 		// on windows, write symlinks as regular files
 		w, err := fs.GetWriter(entry)
