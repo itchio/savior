@@ -8,8 +8,11 @@ import (
 	"runtime"
 
 	"github.com/itchio/headway/state"
+	"github.com/itchio/ox"
 	"github.com/pkg/errors"
 )
+
+var EnableLegacyPreallocate = os.Getenv("SAVIOR_LEGACY_PREALLOCATE") == "1"
 
 const (
 	// ModeMask is or'd with files walked by butler
@@ -173,13 +176,30 @@ func (fs *FolderSink) Preallocate(entry *Entry) error {
 
 	defer f.Close()
 
+	if entry.UncompressedSize > 0 {
+		if EnableLegacyPreallocate {
+			err := legacyPreallocate(f, entry.UncompressedSize)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := ox.Preallocate(f, entry.UncompressedSize)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func legacyPreallocate(f *os.File, size int64) error {
 	endOffset, err := f.Seek(0, io.SeekEnd)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	// N.B: we can't use f.Truncate as that doesn't actually reserve blocks
-	allocSize := entry.UncompressedSize - endOffset
+	allocSize := size - endOffset
 	if allocSize > 0 {
 		_, err := io.CopyN(f, &zeroReader{}, allocSize)
 		if err != nil {

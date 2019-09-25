@@ -9,8 +9,9 @@ require (
 	github.com/itchio/headway v0.0.0-20190702175331-a4c65c5306de
 	github.com/itchio/httpkit v0.0.0-20190702184704-639fe5edf1f1
 	github.com/itchio/kompress v0.0.0-20190702090658-5e2558a00102
+	github.com/itchio/ox v0.0.0-20190925154941-b613e528fc7d
 	github.com/itchio/randsource v0.0.0-20190702184213-a7635a4cb94b
 	github.com/pkg/errors v0.8.1
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
-	github.com/stretchr/testify v1.3.1-0.20190311161405-34c6fa2dc709
+	github.com/stretchr/testify v1.4.0
 )
