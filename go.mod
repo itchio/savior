@@ -7,7 +7,7 @@ require (
 	github.com/itchio/dskompress v0.0.0-20190702113811-5e6f499be697
 	github.com/itchio/go-brotli v0.0.0-20190702114328-3f28d645a45c
 	github.com/itchio/headway v0.0.0-20191015112415-46f64dd4d524
-	github.com/itchio/httpkit v0.0.0-20200218082411-6d24aa45ae5b
+	github.com/itchio/httpkit v0.0.0-20200228192911-d307914d3efe
 	github.com/itchio/kompress v0.0.0-20200217190736-d01615876e8d
 	github.com/itchio/ox v0.0.0-20191031175435-32d876f09b55
 	github.com/itchio/randsource v0.0.0-20190703104731-3f6d22f91927
