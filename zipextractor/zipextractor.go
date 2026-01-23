@@ -2,7 +2,6 @@ package zipextractor
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -156,7 +155,7 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 
 				defer rc.Close()
 
-				linkname, err := ioutil.ReadAll(rc)
+				linkname, err := io.ReadAll(rc)
 				if err != nil {
 					return errors.WithStack(err)
 				}

@@ -3,7 +3,6 @@ package seeksource_test
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -37,7 +36,7 @@ func Test_FromBytes(t *testing.T) {
 	_, err := ss.Resume(nil)
 	must(t, err)
 
-	out, err := ioutil.ReadAll(ss)
+	out, err := io.ReadAll(ss)
 	must(t, err)
 
 	assert.EqualValues(t, reference, out)
@@ -68,14 +67,14 @@ func Test_FromReadSeeker(t *testing.T) {
 	_, err := ss.Resume(nil)
 	must(t, err)
 
-	out, err := ioutil.ReadAll(ss)
+	out, err := io.ReadAll(ss)
 	must(t, err)
 
 	assert.EqualValues(t, reference, out)
 }
 
 func Test_FromFile(t *testing.T) {
-	f, err := ioutil.TempFile("", "seeksource-file")
+	f, err := os.CreateTemp("", "seeksource-file")
 	defer os.RemoveAll(f.Name())
 	defer f.Close()
 
@@ -89,7 +88,7 @@ func Test_FromFile(t *testing.T) {
 	_, err = ss.Resume(nil)
 	must(t, err)
 
-	out, err := ioutil.ReadAll(ss)
+	out, err := io.ReadAll(ss)
 	must(t, err)
 
 	assert.EqualValues(t, reference, out)
@@ -140,7 +139,7 @@ func Test_SaveResume(t *testing.T) {
 	assert.True(t, ss2.Progress() < 0.6)
 
 	{
-		copied, err := io.Copy(ioutil.Discard, ss2)
+		copied, err := io.Copy(io.Discard, ss2)
 		must(t, err)
 		assert.EqualValues(t, int64(len(reference))-ss2Offset, copied)
 	}
@@ -151,7 +150,7 @@ func Test_SaveResume(t *testing.T) {
 	assert.EqualValues(t, ssOffset, ss.Tell())
 
 	{
-		copied, err := io.Copy(ioutil.Discard, ss)
+		copied, err := io.Copy(io.Discard, ss)
 		must(t, err)
 		assert.EqualValues(t, int64(len(reference))-ssOffset, copied)
 	}
@@ -193,7 +192,7 @@ func Test_Section(t *testing.T) {
 		_, err = ss2.Resume(nil)
 		must(t, err)
 
-		out, err := ioutil.ReadAll(ss2)
+		out, err := io.ReadAll(ss2)
 		must(t, err)
 
 		assert.EqualValues(t, reference[:512], out)
@@ -206,7 +205,7 @@ func Test_Section(t *testing.T) {
 		_, err = ss2.Resume(nil)
 		must(t, err)
 
-		out, err := ioutil.ReadAll(ss2)
+		out, err := io.ReadAll(ss2)
 		must(t, err)
 
 		assert.EqualValues(t, reference[256:256+512], out)

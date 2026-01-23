@@ -2,7 +2,6 @@ package countingsource_test
 
 import (
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/itchio/savior/countingsource"
@@ -26,7 +25,7 @@ func Test_Callback(t *testing.T) {
 	_, err := cs.Resume(nil)
 	assert.NoError(t, err)
 
-	_, err = io.Copy(ioutil.Discard, cs)
+	_, err = io.Copy(io.Discard, cs)
 	assert.NoError(t, err)
 
 	assert.True(t, numCalls > 0, "progress must be called at least once")

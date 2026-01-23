@@ -1,7 +1,7 @@
 package savior_test
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -12,7 +12,7 @@ import (
 func Test_FolderSink(t *testing.T) {
 	assert := assert.New(t)
 
-	dir, err := ioutil.TempDir("", "foldersink-test")
+	dir, err := os.MkdirTemp("", "foldersink-test")
 	tmust(t, err)
 
 	fs := &savior.FolderSink{
@@ -44,7 +44,7 @@ func Test_FolderSink(t *testing.T) {
 		tmust(t, err)
 	}
 
-	bs, err := ioutil.ReadFile(filepath.Join(dir, "secret"))
+	bs, err := os.ReadFile(filepath.Join(dir, "secret"))
 	tmust(t, err)
 
 	s := string(bs)
@@ -54,7 +54,7 @@ func Test_FolderSink(t *testing.T) {
 func Test_FolderSinkIgnorePaths(t *testing.T) {
 	assert := assert.New(t)
 
-	dir, err := ioutil.TempDir("", "foldersink-test")
+	dir, err := os.MkdirTemp("", "foldersink-test")
 	tmust(t, err)
 
 	fs := &savior.FolderSink{
@@ -87,7 +87,7 @@ func Test_FolderSinkIgnorePaths(t *testing.T) {
 		}
 	}
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	tmust(t, err)
 
 	assert.Equal(1, len(files))
