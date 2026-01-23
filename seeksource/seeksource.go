@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/itchio/savior"
 	"github.com/itchio/httpkit/eos"
+	"github.com/itchio/savior"
 	"github.com/pkg/errors"
 )
 

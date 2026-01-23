@@ -1,10 +1,10 @@
 package filesource
 
 import (
-	"github.com/itchio/savior"
-	"github.com/itchio/savior/seeksource"
 	"github.com/itchio/httpkit/eos"
 	"github.com/itchio/httpkit/eos/option"
+	"github.com/itchio/savior"
+	"github.com/itchio/savior/seeksource"
 )
 
 func OpenPaused(name string, opts ...option.Option) (savior.FileSource, error) {

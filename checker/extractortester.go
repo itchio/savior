@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/itchio/headway/state"
 	"github.com/itchio/headway/united"
 	"github.com/itchio/savior"
-	"github.com/itchio/headway/state"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )

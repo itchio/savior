@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/itchio/headway/state"
+	"github.com/itchio/headway/united"
 	"github.com/itchio/savior/flatesource"
 	"github.com/itchio/savior/seeksource"
-	"github.com/itchio/headway/united"
-	"github.com/itchio/headway/state"
 
 	"github.com/itchio/arkive/zip"
 	"github.com/itchio/savior"

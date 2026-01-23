@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/itchio/arkive/tar"
-	"github.com/itchio/savior"
 	"github.com/itchio/headway/state"
 	"github.com/itchio/headway/united"
+	"github.com/itchio/savior"
 	"github.com/pkg/errors"
 )
 

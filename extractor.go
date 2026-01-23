@@ -4,8 +4,8 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/itchio/headway/united"
 	"github.com/itchio/headway/state"
+	"github.com/itchio/headway/united"
 )
 
 type ExtractorCheckpoint struct {
