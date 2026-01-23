@@ -141,6 +141,10 @@ func (ze *ZipExtractor) Resume(checkpoint *savior.ExtractorCheckpoint, sink savi
 
 			ze.consumer.Debugf("→ %s", entry)
 
+			if zf.Flags&0x1 != 0 {
+				return zip.ErrEncrypted
+			}
+
 			switch entry.Kind {
 			case savior.EntryKindDir:
 				err := sink.Mkdir(entry)
