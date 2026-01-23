@@ -16,6 +16,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrEncrypted is returned when attempting to extract an encrypted zip file
+var ErrEncrypted = zip.ErrEncrypted
+
 const defaultFlateThreshold = 1 * 1024 * 1024
 
 type ZipExtractor struct {
