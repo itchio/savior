@@ -1,11 +1,13 @@
 package savior
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/itchio/headway/state"
 	"github.com/itchio/ox"
@@ -48,8 +50,26 @@ func shouldIgnorePath(s string) bool {
 	return ok
 }
 
-func (fs *FolderSink) destPath(entry *Entry) string {
-	return filepath.Join(fs.Directory, filepath.FromSlash(entry.CanonicalPath))
+// ErrPathTraversal is returned when an archive entry attempts to escape the destination directory
+var ErrPathTraversal = fmt.Errorf("path traversal detected")
+
+// destPath returns the safe destination path for an entry, validating that it
+// stays within the sink's Directory to prevent path traversal attacks (ZIP slip).
+func (fs *FolderSink) destPath(entry *Entry) (string, error) {
+	absBase, err := filepath.Abs(fs.Directory)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	joined := filepath.Join(absBase, filepath.FromSlash(entry.CanonicalPath))
+	absJoined, err := filepath.Abs(joined)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	// Ensure the path is within the base directory
+	if !strings.HasPrefix(absJoined, absBase+string(filepath.Separator)) && absJoined != absBase {
+		return "", fmt.Errorf("%w: %s", ErrPathTraversal, entry.CanonicalPath)
+	}
+	return absJoined, nil
 }
 
 func (fs *FolderSink) Mkdir(entry *Entry) error {
@@ -57,7 +77,10 @@ func (fs *FolderSink) Mkdir(entry *Entry) error {
 		return nil
 	}
 
-	dstpath := fs.destPath(entry)
+	dstpath, err := fs.destPath(entry)
+	if err != nil {
+		return err
+	}
 
 	dirstat, err := os.Lstat(dstpath)
 	if err != nil {
@@ -87,10 +110,13 @@ func (fs *FolderSink) Mkdir(entry *Entry) error {
 }
 
 func (fs *FolderSink) createFile(entry *Entry) (*os.File, error) {
-	dstpath := fs.destPath(entry)
+	dstpath, err := fs.destPath(entry)
+	if err != nil {
+		return nil, err
+	}
 
 	dirname := filepath.Dir(dstpath)
-	err := os.MkdirAll(dirname, LuckyMode)
+	err = os.MkdirAll(dirname, LuckyMode)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -232,9 +258,33 @@ func (fs *FolderSink) Symlink(entry *Entry, linkname string) error {
 	}
 
 	// actual symlink code
-	dstpath := fs.destPath(entry)
+	dstpath, err := fs.destPath(entry)
+	if err != nil {
+		return err
+	}
 
-	err := os.RemoveAll(dstpath)
+	// Validate symlink target doesn't escape the destination directory.
+	// Resolve the symlink target relative to the symlink's directory.
+	symlinkDir := filepath.Dir(dstpath)
+	absBase, err := filepath.Abs(fs.Directory)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	// If linkname is absolute, reject it
+	if filepath.IsAbs(linkname) {
+		return fmt.Errorf("%w: absolute symlink target %s", ErrPathTraversal, linkname)
+	}
+	// Resolve the symlink target relative to where the symlink will be created
+	resolvedTarget := filepath.Join(symlinkDir, linkname)
+	absTarget, err := filepath.Abs(resolvedTarget)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if !strings.HasPrefix(absTarget, absBase+string(filepath.Separator)) && absTarget != absBase {
+		return fmt.Errorf("%w: symlink target escapes destination: %s", ErrPathTraversal, linkname)
+	}
+
+	err = os.RemoveAll(dstpath)
 	if err != nil {
 		return errors.WithStack(err)
 	}
