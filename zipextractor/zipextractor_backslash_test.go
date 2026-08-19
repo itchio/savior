@@ -2,6 +2,7 @@ package zipextractor_test
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -37,7 +38,7 @@ func TestZipNormalizeBackslashes(t *testing.T) {
 	})
 
 	_, err := zipextractor.New(bytes.NewReader(zipBytes), int64(len(zipBytes)))
-	assert.ErrorIs(t, err, zip.ErrInsecurePath)
+	assert.True(t, errors.Is(err, zip.ErrInsecurePath))
 
 	ex, err := zipextractor.NewWithParams(bytes.NewReader(zipBytes), int64(len(zipBytes)), zipextractor.Params{
 		NormalizeBackslashes: true,
@@ -67,5 +68,5 @@ func TestZipNormalizeBackslashesStillRejectsTraversal(t *testing.T) {
 	_, err := zipextractor.NewWithParams(bytes.NewReader(zipBytes), int64(len(zipBytes)), zipextractor.Params{
 		NormalizeBackslashes: true,
 	})
-	assert.ErrorIs(t, err, zip.ErrInsecurePath)
+	assert.True(t, errors.Is(err, zip.ErrInsecurePath))
 }

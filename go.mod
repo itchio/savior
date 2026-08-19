@@ -3,7 +3,7 @@ module github.com/itchio/savior
 go 1.21
 
 require (
-	github.com/itchio/arkive v0.0.0-20260123020546-e17bae820608
+	github.com/itchio/arkive v0.0.0-20260424164943-5eabdbdce5c8
 	github.com/itchio/dskompress v0.0.0-20190702113811-5e6f499be697
 	github.com/itchio/go-brotli v0.0.0-20190702114328-3f28d645a45c
 	github.com/itchio/headway v0.0.0-20200301160421-e15721f23905
