@@ -16,7 +16,7 @@ type SourceCheckpoint struct {
 
 	// Data is a source-specific pointer to a struct, which must be
 	// registered with `gob` so that it can be serialized and deserialized
-	Data interface{}
+	Data any
 }
 
 var ErrUninitializedSource = errors.New("tried to read from source before Resume() was called")
@@ -111,10 +111,7 @@ func (cssc *CallbackSourceSaveConsumer) Save(checkpoint *SourceCheckpoint) error
 func DiscardByRead(source Source, delta int64) error {
 	buf := make([]byte, 4096)
 	for delta > 0 {
-		toRead := delta
-		if toRead > int64(len(buf)) {
-			toRead = int64(len(buf))
-		}
+		toRead := min(delta, int64(len(buf)))
 
 		n, err := source.Read(buf[:toRead])
 		if err != nil {

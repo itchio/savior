@@ -13,7 +13,7 @@ type ExtractorCheckpoint struct {
 	EntryIndex       int64
 	Entry            *Entry
 	Progress         float64
-	Data             interface{}
+	Data             any
 }
 
 type ExtractorResult struct {
