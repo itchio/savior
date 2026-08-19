@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/itchio/headway/state"
@@ -35,10 +36,29 @@ type ZipExtractor struct {
 
 var _ savior.Extractor = (*ZipExtractor)(nil)
 
+type Params struct {
+	// Interpret backslashes in entry names as path separators. The zip spec
+	// mandates forward slashes, but some Windows tools emit backslash-separated
+	// names, which zip.NewReader rejects as insecure. When set, such names are
+	// rewritten to use forward slashes; names that are still non-local after
+	// rewriting (absolute, "..") keep the archive rejected.
+	NormalizeBackslashes bool
+}
+
 func New(reader io.ReaderAt, readerSize int64) (*ZipExtractor, error) {
+	return NewWithParams(reader, readerSize, Params{})
+}
+
+func NewWithParams(reader io.ReaderAt, readerSize int64, params Params) (*ZipExtractor, error) {
 	zr, err := zip.NewReader(reader, readerSize)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		// zip.NewReader returns a usable reader alongside ErrInsecurePath
+		if params.NormalizeBackslashes && err == zip.ErrInsecurePath {
+			err = normalizeBackslashNames(zr)
+		}
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	ex := &ZipExtractor{
@@ -61,6 +81,20 @@ func New(reader io.ReaderAt, readerSize int64) (*ZipExtractor, error) {
 	}
 
 	return ex, nil
+}
+
+func normalizeBackslashNames(zr *zip.Reader) error {
+	for _, f := range zr.File {
+		if f.Name == "" {
+			continue
+		}
+		name := strings.ReplaceAll(f.Name, `\`, "/")
+		if !filepath.IsLocal(name) {
+			return zip.ErrInsecurePath
+		}
+		f.Name = name
+	}
+	return nil
 }
 
 func (ze *ZipExtractor) SetSaveConsumer(saveConsumer savior.SaveConsumer) {
