@@ -212,22 +212,19 @@ func Test_FolderSinkSymlinkPathTraversal(t *testing.T) {
 	}
 }
 
-// symlinkSink is a small helper for the symlink policy tests below.
 type symlinkSink struct {
-	t  *testing.T
 	fs *savior.FolderSink
 }
 
 func newSymlinkSink(t *testing.T) (*symlinkSink, string) {
+	t.Helper()
 	if runtime.GOOS == "windows" {
 		t.Skip("symlink tests not applicable on Windows")
 	}
-	parent, err := os.MkdirTemp("", "foldersink-symlink-policy")
-	tmust(t, err)
-	t.Cleanup(func() { os.RemoveAll(parent) })
+	parent := t.TempDir()
 	dir := filepath.Join(parent, "dest")
 	tmust(t, os.Mkdir(dir, 0o755))
-	return &symlinkSink{t: t, fs: &savior.FolderSink{Directory: dir}}, parent
+	return &symlinkSink{fs: &savior.FolderSink{Directory: dir}}, parent
 }
 
 func (s *symlinkSink) symlink(path, target string) error {
@@ -293,69 +290,86 @@ func Test_FolderSinkSymlinkForwardReference(t *testing.T) {
 }
 
 func Test_FolderSinkSymlinkLeafReplacement(t *testing.T) {
-	s, parent := newSymlinkSink(t)
-	dir := s.fs.Directory
+	t.Run("ordinary", func(t *testing.T) {
+		s, parent := newSymlinkSink(t)
+		dir := s.fs.Directory
 
-	tmust(t, s.mkdir("sub"))
-	tmust(t, s.file("sub/target.txt", "target"))
+		tmust(t, s.mkdir("sub"))
+		tmust(t, s.file("sub/target.txt", "target"))
 
-	// A leaf symlink may be replaced by a file, a directory, or another
-	// link; the old link is removed, never written through.
-	tmust(t, s.symlink("x", "sub"))
-	tmust(t, s.file("x", "plain"))
-	bs, err := os.ReadFile(filepath.Join(dir, "x"))
-	tmust(t, err)
-	assert.Equal(t, "plain", string(bs))
-	bs, err = os.ReadFile(filepath.Join(dir, "sub", "target.txt"))
-	tmust(t, err)
-	assert.Equal(t, "target", string(bs), "replacing the link must not touch its target")
+		// A leaf symlink may be replaced by a file, a directory, or another
+		// link; the old link is removed, never written through.
+		tmust(t, s.symlink("x", "sub"))
+		tmust(t, s.file("x", "plain"))
+		bs, err := os.ReadFile(filepath.Join(dir, "x"))
+		tmust(t, err)
+		assert.Equal(t, "plain", string(bs))
+		bs, err = os.ReadFile(filepath.Join(dir, "sub", "target.txt"))
+		tmust(t, err)
+		assert.Equal(t, "target", string(bs), "replacing the link must not touch its target")
 
-	tmust(t, s.symlink("y", "sub"))
-	tmust(t, s.mkdir("y"))
-	st, err := os.Lstat(filepath.Join(dir, "y"))
-	tmust(t, err)
-	assert.True(t, st.IsDir())
+		tmust(t, s.symlink("y", "sub"))
+		tmust(t, s.mkdir("y"))
+		st, err := os.Lstat(filepath.Join(dir, "y"))
+		tmust(t, err)
+		assert.True(t, st.IsDir())
 
-	tmust(t, s.symlink("z", "sub"))
-	tmust(t, s.symlink("z", "sub/target.txt"))
-	link, err := os.Readlink(filepath.Join(dir, "z"))
-	tmust(t, err)
-	assert.Equal(t, "sub/target.txt", link)
+		tmust(t, s.symlink("z", "sub"))
+		tmust(t, s.symlink("z", "sub/target.txt"))
+		link, err := os.Readlink(filepath.Join(dir, "z"))
+		tmust(t, err)
+		assert.Equal(t, "sub/target.txt", link)
 
-	// A leaf that already points outside (left by an older extractor, or by
-	// the forward-reference ordering) is replaced, not followed.
-	tmust(t, os.Symlink("..", filepath.Join(dir, "out")))
-	tmust(t, s.file("out", "plain"))
-	st, err = os.Lstat(filepath.Join(dir, "out"))
-	tmust(t, err)
-	assert.True(t, st.Mode().IsRegular())
-	tmust(t, os.Symlink("..", filepath.Join(dir, "out-dir")))
-	tmust(t, s.mkdir("out-dir"))
-	st, err = os.Lstat(filepath.Join(dir, "out-dir"))
-	tmust(t, err)
-	assert.True(t, st.IsDir())
-	// but writing through it is still refused
-	tmust(t, os.Symlink("..", filepath.Join(dir, "out-parent")))
-	assertTraversal(t, s.file("out-parent/escaped.txt", "x"), "file through outside-pointing leaf")
+		assertNothingEscaped(t, parent)
+	})
 
-	// Cyclic links must neither loop nor be written through.
-	tmust(t, s.symlink("loop", "loop"))
-	assertTraversal(t, s.file("loop/escaped.txt", "x"), "file through self-referential link")
-	tmust(t, s.file("loop", "plain"))
-	tmust(t, s.symlink("ping", "pong"))
-	tmust(t, s.symlink("pong", "ping"))
-	assertTraversal(t, s.mkdir("ping/escaped-dir"), "dir through cyclic link")
-	tmust(t, s.mkdir("ping"))
-	st, err = os.Lstat(filepath.Join(dir, "ping"))
-	tmust(t, err)
-	assert.True(t, st.IsDir())
+	t.Run("outside", func(t *testing.T) {
+		s, parent := newSymlinkSink(t)
+		dir := s.fs.Directory
 
-	assertNothingEscaped(t, parent)
+		// A leaf that already points outside (left by an older extractor, or by
+		// the forward-reference ordering) is replaced, not followed.
+		tmust(t, os.Symlink("..", filepath.Join(dir, "out")))
+		tmust(t, s.file("out", "plain"))
+		st, err := os.Lstat(filepath.Join(dir, "out"))
+		tmust(t, err)
+		assert.True(t, st.Mode().IsRegular())
+		tmust(t, os.Symlink("..", filepath.Join(dir, "out-dir")))
+		tmust(t, s.mkdir("out-dir"))
+		st, err = os.Lstat(filepath.Join(dir, "out-dir"))
+		tmust(t, err)
+		assert.True(t, st.IsDir())
+		// but writing through it is still refused
+		tmust(t, os.Symlink("..", filepath.Join(dir, "out-parent")))
+		assertTraversal(t, s.file("out-parent/escaped.txt", "x"), "file through outside-pointing leaf")
+
+		assertNothingEscaped(t, parent)
+	})
+
+	t.Run("cyclic", func(t *testing.T) {
+		s, parent := newSymlinkSink(t)
+		dir := s.fs.Directory
+
+		// Cyclic links must neither loop nor be written through.
+		tmust(t, s.symlink("loop", "loop"))
+		assertTraversal(t, s.file("loop/escaped.txt", "x"), "file through self-referential link")
+		tmust(t, s.file("loop", "plain"))
+		tmust(t, s.symlink("ping", "pong"))
+		tmust(t, s.symlink("pong", "ping"))
+		assertTraversal(t, s.mkdir("ping/escaped-dir"), "dir through cyclic link")
+		tmust(t, s.mkdir("ping"))
+		st, err := os.Lstat(filepath.Join(dir, "ping"))
+		tmust(t, err)
+		assert.True(t, st.IsDir())
+
+		assertNothingEscaped(t, parent)
+	})
 }
 
 func Test_FolderSinkSymlinkAppBundle(t *testing.T) {
 	s, parent := newSymlinkSink(t)
 	dir := s.fs.Directory
+	framework := "Game.app/Contents/Frameworks/SDL2.framework"
 
 	// Layout of a macOS .app with an embedded framework, in the order
 	// archivers usually emit it: real files under Versions/A, a Current
@@ -363,15 +377,15 @@ func Test_FolderSinkSymlinkAppBundle(t *testing.T) {
 	tmust(t, s.mkdir("Game.app/Contents/MacOS"))
 	tmust(t, s.file("Game.app/Contents/MacOS/Game", "binary"))
 	tmust(t, s.file("Game.app/Contents/Info.plist", "plist"))
-	tmust(t, s.mkdir("Game.app/Contents/Frameworks/SDL2.framework/Versions/A/Resources"))
-	tmust(t, s.file("Game.app/Contents/Frameworks/SDL2.framework/Versions/A/SDL2", "dylib"))
-	tmust(t, s.file("Game.app/Contents/Frameworks/SDL2.framework/Versions/A/Resources/Info.plist", "plist"))
-	tmust(t, s.symlink("Game.app/Contents/Frameworks/SDL2.framework/Versions/Current", "A"))
-	tmust(t, s.symlink("Game.app/Contents/Frameworks/SDL2.framework/SDL2", "Versions/Current/SDL2"))
-	tmust(t, s.symlink("Game.app/Contents/Frameworks/SDL2.framework/Resources", "Versions/Current/Resources"))
+	tmust(t, s.mkdir(framework+"/Versions/A/Resources"))
+	tmust(t, s.file(framework+"/Versions/A/SDL2", "dylib"))
+	tmust(t, s.file(framework+"/Versions/A/Resources/Info.plist", "plist"))
+	tmust(t, s.symlink(framework+"/Versions/Current", "A"))
+	tmust(t, s.symlink(framework+"/SDL2", "Versions/Current/SDL2"))
+	tmust(t, s.symlink(framework+"/Resources", "Versions/Current/Resources"))
 	tmust(t, s.symlink("Game.app/Contents/MacOS/libSDL2.dylib", "../Frameworks/SDL2.framework/SDL2"))
 
-	bs, err := os.ReadFile(filepath.Join(dir, "Game.app/Contents/Frameworks/SDL2.framework/SDL2"))
+	bs, err := os.ReadFile(filepath.Join(dir, framework+"/SDL2"))
 	tmust(t, err)
 	assert.Equal(t, "dylib", string(bs))
 	bs, err = os.ReadFile(filepath.Join(dir, "Game.app/Contents/MacOS/libSDL2.dylib"))
@@ -379,7 +393,7 @@ func Test_FolderSinkSymlinkAppBundle(t *testing.T) {
 	assert.Equal(t, "dylib", string(bs))
 
 	// Writing through the Current alias is the one thing refused.
-	assertTraversal(t, s.file("Game.app/Contents/Frameworks/SDL2.framework/Versions/Current/extra", "x"), "write through Current alias")
+	assertTraversal(t, s.file(framework+"/Versions/Current/extra", "x"), "write through Current alias")
 
 	assertNothingEscaped(t, parent)
 }
