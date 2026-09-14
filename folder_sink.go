@@ -29,6 +29,13 @@ const (
 
 var onWindows = runtime.GOOS == "windows"
 
+// FolderSink writes extracted entries under Directory.
+//
+// Directory itself is trusted: the checks below only guard against entries
+// escaping it, not against Directory pointing somewhere it should not. They
+// are path checks made before each filesystem operation, so a concurrent
+// writer changing the tree between check and write is not covered; the
+// caller is expected to be the only writer during extraction.
 type FolderSink struct {
 	Directory string
 	Consumer  *state.Consumer
@@ -69,7 +76,44 @@ func (fs *FolderSink) destPath(entry *Entry) (string, error) {
 	if !strings.HasPrefix(absJoined, absBase+string(filepath.Separator)) && absJoined != absBase {
 		return "", fmt.Errorf("%w: %s", ErrPathTraversal, entry.CanonicalPath)
 	}
+	if err := rejectSymlinkParents(absBase, absJoined); err != nil {
+		return "", err
+	}
 	return absJoined, nil
+}
+
+// rejectSymlinkParents returns ErrPathTraversal if any directory component
+// of dstpath below absBase is currently a symlink on disk. The lexical
+// check above only sees the path as written; once an earlier entry has
+// created "d" -> ".", a later "d/e" is really "e", and "d/e" -> ".." then
+// escapes the destination. Refusing to write through symlinked directories
+// closes that off regardless of entry order. Leaf symlinks are fine: the
+// callers replace them before writing.
+func rejectSymlinkParents(absBase, dstpath string) error {
+	rel, err := filepath.Rel(absBase, filepath.Dir(dstpath))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if rel == "." {
+		return nil
+	}
+	cur := absBase
+	for _, comp := range strings.Split(rel, string(filepath.Separator)) {
+		cur = filepath.Join(cur, comp)
+		stat, err := os.Lstat(cur)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// nothing deeper exists yet either
+				return nil
+			}
+			return errors.WithStack(err)
+		}
+		if stat.Mode()&os.ModeSymlink != 0 {
+			relLink, _ := filepath.Rel(absBase, cur)
+			return fmt.Errorf("%w: parent %s is a symlink", ErrPathTraversal, relLink)
+		}
+	}
+	return nil
 }
 
 func (fs *FolderSink) Mkdir(entry *Entry) error {
