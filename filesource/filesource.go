@@ -1,14 +1,16 @@
 package filesource
 
 import (
+	"context"
+
 	"github.com/itchio/httpkit/eos"
 	"github.com/itchio/httpkit/eos/option"
 	"github.com/itchio/savior"
 	"github.com/itchio/savior/seeksource"
 )
 
-func OpenPaused(name string, opts ...option.Option) (savior.FileSource, error) {
-	f, err := eos.Open(name, opts...)
+func OpenPaused(ctx context.Context, name string, opts ...option.Option) (savior.FileSource, error) {
+	f, err := eos.Open(ctx, name, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -21,8 +23,8 @@ func OpenPaused(name string, opts ...option.Option) (savior.FileSource, error) {
 	return fs, nil
 }
 
-func Open(name string, opts ...option.Option) (savior.FileSource, error) {
-	s, err := OpenPaused(name, opts...)
+func Open(ctx context.Context, name string, opts ...option.Option) (savior.FileSource, error) {
+	s, err := OpenPaused(ctx, name, opts...)
 	if err != nil {
 		return nil, err
 	}
