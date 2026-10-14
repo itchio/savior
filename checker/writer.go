@@ -31,7 +31,7 @@ func (cw *Writer) Write(buf []byte) (int, error) {
 	}
 
 	n := 0
-	for i := 0; i < len(buf); i++ {
+	for i := range buf {
 		if cw.offset >= int64(len(cw.reference)) {
 			return n, errors.WithStack(fmt.Errorf("out of bounds write: %d but max length is %d", cw.offset, len(cw.reference)))
 		}

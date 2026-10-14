@@ -51,7 +51,7 @@ func Test_ReadByte(t *testing.T) {
 	_, err := ss.Resume(nil)
 	must(t, err)
 
-	for i := 0; i < len(reference); i++ {
+	for i := range reference {
 		b, err := ss.ReadByte()
 		must(t, err)
 		assert.EqualValues(t, reference[i], b)

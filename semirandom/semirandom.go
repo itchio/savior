@@ -27,14 +27,14 @@ func Write(output io.Writer, length int64, seed int64) error {
 		} else {
 			seqLength := rng.Intn(48 * 1024)
 			seq := make([]byte, seqLength)
-			for j := 0; j < seqLength; j++ {
+			for j := range seqLength {
 				seq[j] = byte(rng.Intn(255))
 			}
 			oldSeqs = append(oldSeqs, seq)
 		}
 
 		numRepetitions := rng.Intn(24)
-		for j := 0; j < numRepetitions; j++ {
+		for range numRepetitions {
 			_, err := lw.Write(seq)
 			if err != nil {
 				return err
