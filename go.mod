@@ -1,11 +1,11 @@
 module github.com/itchio/savior
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/itchio/arkive v0.0.0-20260424164943-5eabdbdce5c8
 	github.com/itchio/dskompress v0.0.0-20190702113811-5e6f499be697
-	github.com/itchio/go-brotli v0.0.0-20190702114328-3f28d645a45c
+	github.com/itchio/go-brotli v0.0.0-20261025215007-eae0c1b3416b
 	github.com/itchio/headway v0.0.0-20200301160421-e15721f23905
 	github.com/itchio/httpkit v0.0.0-20261014001543-804157f68bf3
 	github.com/itchio/kompress v0.0.0-20200301155538-5c2eecce9e51
